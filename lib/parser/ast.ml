@@ -33,6 +33,10 @@ type arit_op =
     | Divide
     | Modulo
 
+type unary_arit_op =
+    | Positive
+    | Negative
+
 type comp_op = 
     | Equal
     | NotEqual
@@ -47,27 +51,26 @@ type logic_op =
 
 type l_value =
     | Identifier of string
-    | LambdaString of string * bool
+    | LambdaString of string
     | ArrayAccess of l_value * expr
 
-(* we don't need Positive of expr *)
 and expr =
     | LiteralInt of int
     | LiteralChar of char
     | LValue of l_value
-    | Expression of expr
-    | Negative of expr
+    | FuncCall of func_call
+    | Signed of unary_arit_op * expr
     | AritOp of expr * arit_op * expr
+
+and func_call = {
+    name: string;
+    params: expr list;
+}
 
 type cond =
     | LogicalNot of cond
     | LogicOp of cond * logic_op * cond
     | CompOp of expr * comp_op * expr
-
-type func_call = {
-    name: string;
-    params: expr list;
-}
 
 type stmt =
     | EmptyStatement
@@ -76,7 +79,7 @@ type stmt =
     | FuncCall of func_call
     | IfThenElse of cond * stmt * stmt option
     | WhileLoop of cond * stmt
-    | ReturnStmt of stmt option
+    | ReturnStmt of expr option
 
 and block = stmt list
 

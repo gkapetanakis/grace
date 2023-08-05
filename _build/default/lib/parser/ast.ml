@@ -1,88 +1,105 @@
 (* ast.ml *)
+type data_type =
+    | Int
+    | Char
 
-type op =
+type var_type =
+    | DataType of data_type
+    | Array of data_type * int list
+
+type ret_type =
+    | Nothing
+    | RetType of data_type
+
+(* true means first dimension is not declared *)
+type fpar_type =
+    var_type * bool
+
+type fpar_def = {
+    ref: bool;
+    ids: string list;
+    fpar_type: fpar_type;
+}
+
+type var_def = {
+    ids: string list;
+    var_type: var_type;
+}
+
+type arit_op =
     | Add
     | Subtract
     | Multiply
     | Divide
     | Modulo
+
+type unary_arit_op =
+    | Positive
+    | Negative
+
+type comp_op = 
     | Equal
     | NotEqual
     | Less
+    | More
     | LessEqual
-    | Greater
-    | GreaterEqual
+    | MoreEqual
+
+type logic_op =
     | And
     | Or
 
-type unary_op =
-    | Plus
-    | Minus
-    | Not
-
-type data_type =
-    | Int
-    | Char
-
-type fpar_type =
-    data_type * int list
-
-type ret_type =
-    | Nothing
-    | DataType of data_type
-
-type expr =
-    | LiteralInt of int
-    | LiteralChar of char
-    | LiteralString of string
-    | LValue of l_value
-    | FunctionCall of string * expr list
-    | UnaryOp of unary_op * expr
-    | BinaryOp of expr * op * expr
-
-and l_value =
+type l_value =
     | Identifier of string
     | LambdaString of string
     | ArrayAccess of l_value * expr
 
+and expr =
+    | LiteralInt of int
+    | LiteralChar of char
+    | LValue of l_value
+    | FuncCall of func_call
+    | Signed of unary_arit_op * expr
+    | AritOp of expr * arit_op * expr
+
+and func_call = {
+    name: string;
+    params: expr list;
+}
+
 type cond =
-    | Parenthesized of cond
-    | Not of cond
-    | BinaryCond of expr * op * expr
-    | AndCond of cond * cond
-    | OrCond of cond * cond
+    | LogicalNot of cond
+    | LogicOp of cond * logic_op * cond
+    | CompOp of expr * comp_op * expr
 
 type stmt =
-    | Empty
-    | Assignment of l_value * expr
-    | Block of stmt list
-    | FunctionCallStmt of expr
-    | If of cond * stmt * stmt option
-    | While of cond * stmt
-    | Return of expr option
+    | EmptyStatement
+    | Assign of l_value * expr
+    | Block of block
+    | FuncCall of func_call
+    | IfThenElse of cond * stmt * stmt option
+    | WhileLoop of cond * stmt
+    | ReturnStmt of expr option
 
-type local_def =
+and block = stmt list
+
+type header = {
+    name: string;
+    fpar_defs: fpar_def list;
+    ret_type: ret_type;
+}
+
+type func_def = {
+    header: header;
+    local_defs: local_def list;
+    block: block;
+}
+
+and local_def =
     | LocalFuncDef of func_def
-    | LocalFuncDecl of header
+    | LocalFuncDecl of func_decl
     | LocalVarDef of var_def
 
-and func_def = {
-    func_header : header;
-    func_locals : local_def list;
-    func_body : stmt list;
-}
+and func_decl = header
 
-and header = {
-    func_name : string;
-    func_parameters : (bool * string list) list;  (* bool indicates if the parameter is passed by reference *)
-    func_return_type : ret_type;
-}
-
-and var_def = {
-    ids: string list;
-    var_type: fpar_type;
-}
-
-type func_decl = header
-
-type program = func_def
+type program = MainFunction of func_def

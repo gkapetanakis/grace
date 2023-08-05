@@ -3,7 +3,7 @@
 # Shared cache: disabled
 # Workspace root: /home/dimjimitris/grace
 # Auto-detected concurrency: 12
-$ /home/dimjimitris/.opam/default/bin/ocamlc.opt -config > /tmp/dune_4e0bc5_output
+$ /home/dimjimitris/.opam/default/bin/ocamlc.opt -config > /tmp/dune_3a9ba2_output
 # Dune context:
 #  { name = "default"
 #  ; kind = "default"
@@ -31,6 +31,8 @@ $ /home/dimjimitris/.opam/default/bin/ocamlc.opt -config > /tmp/dune_4e0bc5_outp
 #        ; "OCAMLPATH" : "/home/dimjimitris/grace/_build/install/default/lib"
 #        ; "OCAMLTOP_INCLUDE_PATH" :
 #            "/home/dimjimitris/grace/_build/install/default/lib/toplevel"
+#        ; "OCAML_COLOR" : "always"
+#        ; "OPAMCOLOR" : "always"
 #        }
 #  ; findlib_paths =
 #      [ External "/home/dimjimitris/.opam/default/lib/ocaml"
@@ -110,3 +112,20 @@ $ /home/dimjimitris/.opam/default/bin/ocamlc.opt -config > /tmp/dune_4e0bc5_outp
 #      ; windows_unicode = false
 #      }
 #  }
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamldep.opt -modules -impl lib/parser/ast.ml) > _build/default/lib/parser/.parser_lib.objs/parser_lib__Ast.impl.d
+$ (cd _build/.sandbox/34ab14ce858233cdaf117e4e42ecfb02/default && /home/dimjimitris/.opam/default/bin/menhir --external-tokens Tokens_lib.Tokens lib/tokens/tokens.mly lib/parser/parser.mly --base lib/parser/parser --infer-write-query lib/parser/parser__mock.ml.mock)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlc.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -bin-annot -I lib/parser/.parser_lib.objs/byte -I /home/dimjimitris/.opam/default/lib/menhirLib -I lib/tokens/.tokens_lib.objs/byte -no-alias-deps -opaque -open Parser_lib -o lib/parser/.parser_lib.objs/byte/parser_lib__Ast.cmo -c -impl lib/parser/ast.ml)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamldep.opt -modules -impl lib/parser/parser__mock.ml.mock) > _build/default/lib/parser/.parser_lib.objs/parser__mock.impl.d
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -I lib/parser/.parser_lib.objs/byte -I lib/parser/.parser_lib.objs/native -I /home/dimjimitris/.opam/default/lib/menhirLib -I lib/tokens/.tokens_lib.objs/byte -I lib/tokens/.tokens_lib.objs/native -intf-suffix .ml -no-alias-deps -opaque -open Parser_lib -o lib/parser/.parser_lib.objs/native/parser_lib__Ast.cmx -c -impl lib/parser/ast.ml)
+$ (cd _build/.sandbox/2ff6312e0eccbff590147d365b0d1e1b/default && /home/dimjimitris/.opam/default/bin/ocamlc.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -I lib/parser/.parser_lib.objs/byte -I /home/dimjimitris/.opam/default/lib/menhirLib -I lib/tokens/.tokens_lib.objs/byte -open Parser_lib -short-paths -i -impl lib/parser/parser__mock.ml.mock) > _build/.sandbox/2ff6312e0eccbff590147d365b0d1e1b/default/lib/parser/parser__mock.mli.inferred
+$ (cd _build/.sandbox/c53f9f3e5a88b88fdf368e30516d4491/default && /home/dimjimitris/.opam/default/bin/menhir --external-tokens Tokens_lib.Tokens lib/tokens/tokens.mly lib/parser/parser.mly --base lib/parser/parser --infer-read-reply lib/parser/parser__mock.mli.inferred)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlc.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -bin-annot -I lib/parser/.parser_lib.objs/byte -I /home/dimjimitris/.opam/default/lib/menhirLib -I lib/tokens/.tokens_lib.objs/byte -no-alias-deps -opaque -open Parser_lib -o lib/parser/.parser_lib.objs/byte/parser_lib__Parser.cmi -c -intf lib/parser/parser.mli)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlc.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -bin-annot -I bin/.main.eobjs/byte -I /home/dimjimitris/.opam/default/lib/menhirLib -I lib/lexer/.lex_lib.objs/byte -I lib/parser/.parser_lib.objs/byte -I lib/tokens/.tokens_lib.objs/byte -no-alias-deps -opaque -o bin/.main.eobjs/byte/dune__exe__Main.cmi -c -intf bin/main.mli)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamldep.opt -modules -impl lib/parser/parser.ml) > _build/default/lib/parser/.parser_lib.objs/parser_lib__Parser.impl.d
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -I bin/.main.eobjs/byte -I bin/.main.eobjs/native -I /home/dimjimitris/.opam/default/lib/menhirLib -I lib/lexer/.lex_lib.objs/byte -I lib/lexer/.lex_lib.objs/native -I lib/parser/.parser_lib.objs/byte -I lib/parser/.parser_lib.objs/native -I lib/tokens/.tokens_lib.objs/byte -I lib/tokens/.tokens_lib.objs/native -intf-suffix .ml -no-alias-deps -opaque -o bin/.main.eobjs/native/dune__exe__Main.cmx -c -impl bin/main.ml)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlc.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -bin-annot -I lib/parser/.parser_lib.objs/byte -I /home/dimjimitris/.opam/default/lib/menhirLib -I lib/tokens/.tokens_lib.objs/byte -intf-suffix .ml -no-alias-deps -opaque -open Parser_lib -o lib/parser/.parser_lib.objs/byte/parser_lib__Parser.cmo -c -impl lib/parser/parser.ml)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -I lib/parser/.parser_lib.objs/byte -I lib/parser/.parser_lib.objs/native -I /home/dimjimitris/.opam/default/lib/menhirLib -I lib/tokens/.tokens_lib.objs/byte -I lib/tokens/.tokens_lib.objs/native -intf-suffix .ml -no-alias-deps -opaque -open Parser_lib -o lib/parser/.parser_lib.objs/native/parser_lib__Parser.cmx -c -impl lib/parser/parser.ml)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlc.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -a -o lib/parser/parser_lib.cma lib/parser/.parser_lib.objs/byte/parser_lib.cmo lib/parser/.parser_lib.objs/byte/parser_lib__Ast.cmo lib/parser/.parser_lib.objs/byte/parser_lib__Parser.cmo)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -a -o lib/parser/parser_lib.cmxa lib/parser/.parser_lib.objs/native/parser_lib.cmx lib/parser/.parser_lib.objs/native/parser_lib__Ast.cmx lib/parser/.parser_lib.objs/native/parser_lib__Parser.cmx)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -shared -linkall -I lib/parser -o lib/parser/parser_lib.cmxs lib/parser/parser_lib.cmxa)
+$ (cd _build/default && /home/dimjimitris/.opam/default/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62@67@69-40 -strict-sequence -strict-formats -short-paths -keep-locs -g -o bin/main.exe lib/tokens/tokens_lib.cmxa lib/lexer/lex_lib.cmxa /home/dimjimitris/.opam/default/lib/menhirLib/menhirLib.cmxa lib/parser/parser_lib.cmxa bin/.main.eobjs/native/dune__exe__Main.cmx)
