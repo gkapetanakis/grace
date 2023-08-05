@@ -107,7 +107,7 @@ let stmt :=
     |   WHILE; ~ = cond; DO; ~ = stmt;                        
     { WhileLoop (cond, stmt) }
     |   RETURN; expr_o = option(expr); SEMICOLON;                              
-    { ReturnStmt expr_o }
+    { ReturnExpr expr_o }
 
 let block :=   
     LEFT_CURL; stmt_list = list(stmt); RIGHT_CURL;                                     

@@ -1,4 +1,27 @@
 (* ast.ml *)
+type arit_op =
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+    | Modulo
+
+type unary_arit_op =
+    | Positive
+    | Negative
+
+type comp_op = 
+    | Equal
+    | NotEqual
+    | Less
+    | More
+    | LessEqual
+    | MoreEqual
+
+type logic_op =
+    | And
+    | Or
+
 type data_type =
     | Int
     | Char
@@ -25,29 +48,6 @@ type var_def = {
     ids: string list;
     var_type: var_type;
 }
-
-type arit_op =
-    | Add
-    | Subtract
-    | Multiply
-    | Divide
-    | Modulo
-
-type unary_arit_op =
-    | Positive
-    | Negative
-
-type comp_op = 
-    | Equal
-    | NotEqual
-    | Less
-    | More
-    | LessEqual
-    | MoreEqual
-
-type logic_op =
-    | And
-    | Or
 
 type l_value =
     | Identifier of string
@@ -79,7 +79,7 @@ type stmt =
     | FuncCall of func_call
     | IfThenElse of cond * stmt * stmt option
     | WhileLoop of cond * stmt
-    | ReturnStmt of expr option
+    | ReturnExpr of expr option
 
 and block = stmt list
 
@@ -88,6 +88,8 @@ type header = {
     fpar_defs: fpar_def list;
     ret_type: ret_type;
 }
+
+type func_decl = header
 
 type func_def = {
     header: header;
@@ -99,7 +101,5 @@ and local_def =
     | LocalFuncDef of func_def
     | LocalFuncDecl of func_decl
     | LocalVarDef of var_def
-
-and func_decl = header
 
 type program = MainFunction of func_def
