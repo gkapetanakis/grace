@@ -1,0 +1,7 @@
+(library
+ (name lex_lib)
+ (modules lexer utils)
+ (libraries tokens_lib))
+
+(ocamllex
+ (modules lexer))

@@ -1,0 +1,3 @@
+(test
+ (name grace)
+ (libraries lex_lib tokens_lib))
