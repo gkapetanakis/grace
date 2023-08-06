@@ -17,6 +17,6 @@ let main () =
         exit 1
     in
       let _ = res in
-      Printf.printf "%s\n" (Parser_lib.Ast.pprint_program res)
+      Printf.printf "%s\n" (Parser_lib.Print_ast.pprint_program res)
 
 let () = main ()
