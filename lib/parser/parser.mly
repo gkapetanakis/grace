@@ -99,7 +99,7 @@ let stmt :=
     |   ~ = block;                                           
     { Block block }
     |   ~ = func_call; SEMICOLON;                                   
-    { FuncCall func_call }
+    { SFuncCall func_call }
     |   IF; ~ = cond; THEN; ~ = stmt;                               
     { IfThenElse (cond, stmt, None) }
     |   IF; ~ = cond; THEN; stmt1 = stmt; ELSE; stmt2 = stmt;                     
@@ -135,7 +135,7 @@ let expr :=
     |   LEFT_PAR; ~ = expr; RIGHT_PAR;                                    
     { expr }
     |   ~ = func_call;                                       
-    { FuncCall func_call }
+    { EFuncCall func_call }
     |   PLUS; ~ = expr;  %prec USIGN                              
     { Signed (Positive, expr) }
     |   MINUS; ~ = expr;  %prec USIGN                                      
