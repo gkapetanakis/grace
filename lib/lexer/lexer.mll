@@ -12,7 +12,6 @@ let id      = ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 let chr     = [' '-'~'] (* valid ASCII characters found in a normal text/string *)
 
-
 (* rules section *)
 rule token = parse
         ws+                         { token lexbuf                                          }
