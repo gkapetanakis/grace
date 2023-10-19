@@ -1,6 +1,0 @@
-(executable
- (public_name grace)
- (name main)
- (libraries lex_lib parser_lib tokens_lib))
-
-

@@ -1,8 +1,0 @@
-
-(library
- (name tokens_lib)
- (modules tokens))
-
-(menhir
- (modules tokens)
- (flags --only-tokens))
