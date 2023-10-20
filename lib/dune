@@ -1,9 +1,0 @@
-(library
- (name gracec))
-
-(ocamllex
- (modules lexer))
-
-(menhir
- (modules tokens)
- (flags --only-tokens))
