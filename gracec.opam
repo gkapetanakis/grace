@@ -7,7 +7,7 @@ authors: ["Author Name"]
 license: "LICENSE"
 tags: ["topics" "to describe" "your" "project"]
 homepage: "https://github.com/username/reponame"
-doc: "https://url/to/documentation"
+doc: "https://duckduckgo.com"
 bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
