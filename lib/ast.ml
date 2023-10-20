@@ -1,3 +1,5 @@
+open Symbol
+
 let sep, endl = "--", "\n"
 
 type loc = Lexing.position * Lexing.position
