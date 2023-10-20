@@ -338,8 +338,9 @@ class stmt (
         | Some e -> e#get_type#get_data_typ in
       let sc = sym_tbl#get_scope_n 1 in
       let en = List.hd sc#get_entries in
-      match en#get_info with
-      | `E_func (fd, _, _) ->
+      match ex_typ, en#get_info with
+      | `Array _, _ -> failwith "Arrays cannot be returned"
+      | _ as ex_typ,`E_func (fd, _, _) ->
         if ex_typ = fd#get_data_typ
           then ()
         else failwith "Return type mismatch"
