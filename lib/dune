@@ -1,3 +1,2 @@
 (library
- (name gracec)
- (modules ast ast_utils symbol))
+ (name gracec))
