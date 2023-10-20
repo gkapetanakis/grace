@@ -78,7 +78,7 @@ let var_def :=
     {  }
 
 let stmt :=   
-  | SEMICOLON;                                             
+  | SEMICOLON;
     {  }
   | ~ = l_value; ASSIGN; ~ = expr; SEMICOLON;                           
     {  }

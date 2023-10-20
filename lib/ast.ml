@@ -1,17 +1,16 @@
-let sep, endl = "--", "\n"
+open Types
+open Symbol
 
-type loc = Lexing.position * Lexing.position
+let sym_tbl = new symbol_table
 
-class virtual node (
-  (_loc: loc)
+class virtual type_node (
+  _loc,
+  (_type : data_type)
 ) =
-object (self)
-  val loc = _loc
-
-  method loc = loc
-  method private virtual to_string_aux : string -> string
-  method to_string off enable =
-    self#to_string_aux off ^ (if enable then endl else "")
+object
+  inherit node (_loc)
+  val typ = _type
+  method get_type = typ
 end
 
 class arit_op (
@@ -97,49 +96,18 @@ object
     | `Or        -> off ^ "Or"
 end
 
-class data_type (
-  _loc,
-  (_data_typ : ([
-    | `Int
-    | `Char
-    | `Nothing
-    | `Array of 'a * int option
-  ] as 'a))) =
-object (self)
-  inherit node (_loc)
-  val data_typ = _data_typ
-
-  method private print_dim = function
-  | None -> "None"
-  | Some h -> string_of_int h
-
-  method get_data_typ = data_typ
-  method private to_string_aux off =
-    let rec aux off = function
-    | `Int          -> off ^ "Int"
-    | `Char         -> off ^ "Char"
-    | `Nothing      -> off ^ "Nothing"
-    | `Array (t, d) -> off ^ "Array(" ^ aux "" t ^ ", " ^ self#print_dim d ^ ")"
-    in aux off data_typ
-end
-
-class virtual type_node (
-  _loc,
-  (_type : data_type)
-) =
-object
-  inherit node (_loc)
-  val typ = _type
-  method get_type = typ
-end
-
 class var_def (
   _loc,
   (_id : string),
   (_data_type : data_type))
   =
+  let sem () =
+    match sym_tbl#lookup _id true with
+    | Some _ -> failwith ("Variable " ^ _id ^ " already defined in the same scope")
+    | None -> sym_tbl#insert _id (`E_var _data_type )
+  in
 object
-  inherit type_node (_loc, _data_type)
+  inherit type_node ((sem () ; _loc), _data_type)
   val id = _id
   val data_type = _data_type
 
@@ -161,11 +129,15 @@ class fpar_def (
     | _ -> _data_type
   in
 object
-  inherit var_def (_loc, _id, check_type())
+  inherit type_node (_loc, check_type())
   val ref = _ref
+  val id = _id
+  val data_type = _data_type
 
   method get_ref = ref
-  method! to_string_aux off =
+  method get_id = id
+  method get_data_type = data_type
+  method to_string_aux off =
     off ^ "FparDef(" ^ "id: " ^ id ^ ", data_type: " ^ data_type#to_string "" false ^ ")" ^
     (if ref then (endl ^ off ^ "pass by reference") else "")
 end
@@ -180,8 +152,11 @@ class l_value (
   =
   let lv_type () =
     match _l_value with
-    | `Identifier _ ->
-      new data_type(_loc, `Int) (* fix later *)
+    | `Identifier id -> (
+      match sym_tbl#lookup id false with
+      | Some e -> e#get_type
+      | None -> failwith ("Variable " ^ id ^ " not defined in any scope")
+    )
     | `LambdaString ls ->
       new data_type (
         _loc,
@@ -266,10 +241,27 @@ and func_call (
   (_id : string),
   (_args : expr list))
   =
-  let check_call () = new data_type (_loc, `Int) (* fix later *)
+  let rec comp_arg_types args param_list =
+    match args, param_list with
+    | [], [] -> true
+    | [], _ -> failwith "Too few arguments"
+    | _, [] -> failwith "Too many arguments"
+    | e :: es, p :: ps ->
+      if e#get_type#get_data_typ = p#get_data_typ
+        then comp_arg_types es ps
+      else failwith "Argument type mismatch"
+  in
+  let sem () =
+    match sym_tbl#lookup _id false with
+    | Some e -> (
+      match e#get_info with
+      | `E_func (fd, pl, _) when comp_arg_types _args pl -> fd
+      | _ -> failwith ("Variable " ^ _id ^ " is not a function")
+    )
+    | None -> failwith ("Variable " ^ _id ^ " not defined in any scope")
   in
 object
-  inherit type_node (_loc, check_call ()) (* fix later *)
+  inherit type_node (_loc, sem ())
   val id = _id
   val args = _args
 
@@ -289,8 +281,18 @@ class cond (
     | `Not of cond
   ])
   ) =
+  let sem () =
+    match _cond with
+    | `CompOp (e1, _, e2) ->
+      let aux e1 e2 tt =
+        e1#get_type#get_data_typ = tt && e2#get_type#get_data_typ = tt in
+      if aux e1 e2 `Int || aux e1 e2 `Char
+      then ()
+      else failwith "Comparison of different types"
+    | _ -> ()
+  in
 object
-  inherit node (_loc)
+  inherit node (sem(); _loc)
   val cons = _cond
 
   method get_cons = cons
@@ -330,12 +332,19 @@ class stmt (
         e1#get_type#get_data_typ = tt && e2#get_type#get_data_typ = tt in
       if aux lv e `Int || aux lv e `Char then ()
       else failwith "Assignment of different types"
-    | `Return Some e -> (* return checks need to do more stuff... *)
-      (match e#get_type#get_data_typ with
-      | `Int -> ()
-      | `Char -> ()
-      | `Nothing -> ()
-      | _ -> failwith "Return types that are allowed: int, char, nothing")
+    | `Return ex -> (
+      let ex_typ = match ex with
+        | None -> `Nothing
+        | Some e -> e#get_type#get_data_typ in
+      let sc = sym_tbl#get_scope_n 1 in
+      let en = List.hd sc#get_entries in
+      match en#get_info with
+      | `E_func (fd, _, _) ->
+        if ex_typ = fd#get_data_typ
+          then ()
+        else failwith "Return type mismatch"
+      | _ -> failwith "Function definition not found"
+      )
     | _ -> ()
   in
 object
@@ -423,8 +432,15 @@ class func_decl (
   (_fpar_defs : fpar_def list),
   (_data_type : data_type))
   =
+  let sem () =
+    match sym_tbl#lookup _id true with
+    | Some _ -> failwith ("Function " ^ _id ^ " already defined in the same scope")
+    | None ->
+      let dt_lst = List.map (fun f -> f#get_data_type) _fpar_defs in
+      sym_tbl#insert _id (`E_func (_data_type, dt_lst, false))
+  in
 object
-  inherit header (_loc, _id, _fpar_defs, _data_type) as super
+  inherit header ((sem (); _loc), _id, _fpar_defs, _data_type) as super
   method! to_string_aux off =
     off ^ "FuncDecl(" ^ endl
     ^ super#to_string (off ^ sep) false ^ ")"
@@ -436,8 +452,17 @@ class func_def (
   (_local_defs : local_def list),
   (_block : block))
   =
+  let sem () =
+    match sym_tbl#lookup _header#get_id true with
+    | Some en -> (
+      match en#get_info with
+      | `E_func (fd, dl, false) -> en#set_info (`E_func (fd, dl, true))
+      | _ -> failwith "Function already defined"
+    )
+    | None -> failwith "Function definition without declaration"
+  in
 object
-  inherit type_node (_loc, _header#get_type)
+  inherit type_node ((sem (); _loc), _header#get_type)
   val header = _header
   val local_defs = _local_defs
   val block = _block
@@ -477,3 +502,4 @@ object
     | `LocalFuncDecl fd -> off ^ "LocalFuncDecl: " ^ endl ^ fd#to_string (off ^ sep) false
     | `LocalVarDef vd -> off ^ "LocalVarDef: " ^ endl ^ vd#to_string (off ^ sep) false
 end
+
