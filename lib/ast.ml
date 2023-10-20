@@ -148,20 +148,16 @@ object
     (if ref then (endl ^ off ^ "pass by reference") else "")
 end
 
-class _l_value (t) = object
-  method get_type = (t : [
+class l_value (
+  _loc,
+  (_l_value : [
     | `Identifier of string
     | `LambdaString of string
     | `ArrayAccess of l_value * expr
-  ]) 
-end
-
-and l_value (
-  _loc,
-  (_cons : _l_value))
+  ]))
   =
   let lv_type () =
-    match _cons#get_type with
+    match _l_value with
     | `Identifier _ -> Int (* fix later *)
     | `LambdaString ls -> Array (Char, Some (String.length ls + 1))
     | `ArrayAccess (lv, e) ->
@@ -173,11 +169,11 @@ and l_value (
   in
 object
   inherit [_type] node (_loc, lv_type ())
-  val cons = _cons
+  val cons = _l_value
 
   method get_cons = cons
   method private to_string_aux off =
-    off ^ "LValue(" ^ "type: " ^ (match cons#get_type with
+    off ^ "LValue(" ^ "type: " ^ (match cons with
       | `Identifier id -> "Identifier(" ^ id ^ ")"
       | `LambdaString ls -> "LambdaString(\"" ^ ls ^ "\")"
       | `ArrayAccess (lv, e) ->
@@ -187,23 +183,19 @@ object
     ) ^ ")"
 end
 
-and _expr (t) = object
-  method get_type = (t : [
+and expr (
+  _loc,
+  (_expr : [
     | `LiteralInt of int
     | `LiteralChar of char
     | `LValue of l_value
     | `EFuncCall of func_call
     | `Signed of unary_arit_op * expr
     | `AritOp of expr * arit_op * expr
-  ])
-end
-
-and expr (
-  _loc,
-  (_cons : _expr))
+  ]))
   =
   let expr_type () =
-    match _cons#get_type with
+    match _expr with
     | `LiteralInt _ -> Int
     | `LiteralChar _ -> Char
     | `LValue lv -> lv#get_type
@@ -217,11 +209,11 @@ and expr (
   in
 object
   inherit [_type] node (_loc, expr_type ())
-  val cons = _cons
+  val cons = _expr
 
   method get_cons = cons
   method private to_string_aux off =
-    match cons#get_type with
+    match cons with
     | `LiteralInt i -> off ^ "LiteralInt(" ^ string_of_int i ^ ")"
     | `LiteralChar c -> off ^ "LiteralChar(" ^ Char.escaped c ^ ")"
     | `LValue lv -> off ^ "LValue: " ^ endl ^ lv#to_string (off ^ sep) false
@@ -257,25 +249,21 @@ object
     ")"
 end
 
-class _cond (t) = object
-  method get_type = (t : [
+class cond (
+  _loc,
+  (_cond : [
     | `CompOp of expr * comp_op * expr
     | `LogicOp of cond * logic_op * cond
     | `Not of cond
   ])
-end
-
-and cond (
-  _loc,
-  (_cons : _cond)
   ) =
 object
   inherit [_internal_type] node (_loc, Bool)
-  val cons = _cons
+  val cons = _cond
 
   method get_cons = cons
   method private to_string_aux off =
-    match cons#get_type with
+    match cons with
     | `CompOp (e1, op, e2) ->
       off ^ "CompOp: " ^ endl ^
       e1#to_string (off ^ sep) true ^
@@ -289,10 +277,11 @@ object
     | `Not c ->
       off ^ "Not: " ^ endl ^
       c#to_string (off ^ sep) false
-end
+    end
 
-class _stmt (t) = object
-  method get_type = (t : [
+class stmt (
+  _loc,
+  (_stmt : [
     | `EmptyStatement
     | `Assign of l_value * expr
     | `Block of block
@@ -301,14 +290,9 @@ class _stmt (t) = object
     | `WhileLoop of cond * stmt
     | `Return of expr option
   ])
-end
-
-and stmt (
-  _loc,
-  (_cons : _stmt)
   ) =
   let check_types () =
-    match _cons#get_type with
+    match _stmt with
     | `Assign (lv, e) ->
       let aux e1 e2 tt = e1#get_type = tt && e2#get_type = tt in
       if aux lv e Int || aux lv e Char then Void
@@ -323,11 +307,11 @@ and stmt (
   in
 object
   inherit [_internal_type] node (_loc, check_types ())
-  val cons = _cons
+  val cons = _stmt
 
   method get_cons = cons
   method private to_string_aux off =
-    match cons#get_type with
+    match cons with
     | `EmptyStatement -> off ^ "EmptyStatement"
     | `Assign (lv, e) ->
       off ^ "Assign: " ^ endl ^
@@ -435,31 +419,27 @@ object
     block#to_string (off ^ sep) false ^ ")"
 end
 
-and _local_def (t) = object
-  method get_type = (t : [
+and local_def (
+  _loc,
+  (_local_def : [
     | `LocalFuncDef of func_def
     | `LocalFuncDecl of func_decl
     | `LocalVarDef of var_def
-  ])
-end
-
-and local_def (
-  _loc,
-  (_cons : _local_def))
+  ]))
   =
   let check_type () =
-    match _cons#get_type with
+    match _local_def with
     | `LocalFuncDef fd -> fd#get_type (* more to do? *)
     | `LocalFuncDecl fd -> fd#get_type (* more to do? *)
     | `LocalVarDef vd -> vd#get_type
   in
 object
   inherit [_type] node (_loc, check_type ())
-  val cons = _cons
+  val cons = _local_def
 
   method get_cons = cons
   method private to_string_aux off =
-    match cons#get_type with
+    match cons with
     | `LocalFuncDef fd -> off ^ "LocalFuncDef: " ^ endl ^ fd#to_string (off ^ sep) false
     | `LocalFuncDecl fd -> off ^ "LocalFuncDecl: " ^ endl ^ fd#to_string (off ^ sep) false
     | `LocalVarDef vd -> off ^ "LocalVarDef: " ^ endl ^ vd#to_string (off ^ sep) false
