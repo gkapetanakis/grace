@@ -14,6 +14,13 @@ object
 
   method get_id = id
   method get_info = info
+  method to_string off enable =
+    Printf.sprintf "%sEntry(%s, %s)%s" off id 
+    (match info with
+     | `E_var vd -> vd#to_string "" false
+     | `E_func (fd, def) -> (if def then "def " else "") ^ fd#to_string "" false
+     | `E_param fd -> fd#to_string "" false
+    ) (if enable then Ast.endl else "")
 end
 
 class scope =
@@ -24,6 +31,9 @@ object
   method get_entries = entries
   method get_entry (id : string) =
     List.find_opt (fun e -> e#get_id = id) entries
+  method to_string off enable =
+    String.concat (Printf.sprintf "%sScope:%s" off Ast.endl)
+    ((List.mapi (fun i e -> e#to_string (off ^ Ast.sep) (i = List.length entries - 1)) entries) @ [if enable then Ast.endl else ""])
 end
 
 class symbol_table =
@@ -52,4 +62,8 @@ object
     match scopes with
     | [] -> failwith "No scope to insert entry"
     | sc :: _ -> sc#add_entry e
+
+  method to_string off enable =
+    String.concat (Printf.sprintf "%sSymbol Table:%s" off Ast.endl)
+    ((List.mapi (fun i s -> s#to_string (off ^ Ast.sep) (i = List.length scopes - 1)) scopes) @ [if enable then Ast.endl else ""])
 end
