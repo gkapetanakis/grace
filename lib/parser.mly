@@ -1,6 +1,7 @@
 %{
     open Ast
     open Symbol
+    open Gift
 %}
 
 %left OR
@@ -16,6 +17,31 @@
 
 %start <unit> program
 
+(* --- some ideas for what the final types will look like? ---
+%start <Ast.func_def node> program
+
+%type <Ast.func_def node> func_def
+%type <Ast.header node> func_def_header
+%type <Ast.header node> header
+%type <Ast.param node list> fpar_def
+%type <Ast.data> data_type
+%type <Ast.data> var_type
+%type <Ast.data> ret_type
+%type <Ast.data> fpar_type
+%type <Ast.local_def node> local_def
+%type <Ast.func_decl node> func_decl
+%type <Ast.var node list> var_def
+%type <Ast.stmt node> stmt
+%type <Ast.block node> block
+%type <Ast.func_call node> func_call
+%type <Ast.l_value node> l_value
+%type <Ast.expr node> expr
+%type <Ast.uarit> sign_op
+%type <Ast.arit> arit_op
+%type <Ast.cond node> cond
+%type <Ast.logic_op> logic_op
+%type <Ast.comp_op> comp_op
+*)
 %%
 
 let program :=
@@ -46,13 +72,13 @@ let data_type :=
 
 let var_type :=
   | dt = data_type; dims = list(delimited(LEFT_BRACKET, LIT_INT, RIGHT_BRACKET));
-    { wrap_var_type ($loc(dt)) dt dims }
+    {  }
 
 let ret_type :=
   | NOTHING;
     { Nothing }
   | ~ = data_type; 
-    {  }
+    { data_type }
 
 let fpar_type :=
   | ~ = data_type; dimensions = list(delimited(LEFT_BRACKET, LIT_INT, RIGHT_BRACKET));
