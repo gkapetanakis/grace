@@ -12,8 +12,8 @@ type entry_type =
   | Variable of Ast.var
   | Parameter of Ast.param
   | Function of {
-  header: Ast.header;
-  mutable status: func_status;
+    header: Ast.header;
+    mutable status: func_status;
 }
 
 type entry = {

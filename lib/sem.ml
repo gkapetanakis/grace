@@ -46,7 +46,7 @@ let rec sem_l_value ({loc; node = lv} : l_value node) sym_tbl =
   | Id id ->
     begin match lookup_all id sym_tbl with
     | None -> raise (Semantic_error (loc, "Variable not defined in any scope"))
-    | Some entry -> entry_type entry (* fix later *)
+    | Some entry -> entry_type entry
     end
   | LString ls -> Array (Char, Some (String.length ls + 1))
   | ArrayAccess (lv, e) ->
