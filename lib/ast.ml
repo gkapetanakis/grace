@@ -51,3 +51,14 @@ and local_def =
 type loc = Lexing.position * Lexing.position
 (* parser rules will return <something> node types *)
 type 'a node = { loc: loc; node: 'a }
+
+let rec get_var_type dt dims =
+  match dims with
+  | [] -> dt
+  | h::t -> Array ((get_var_type dt t), Some h)
+
+let get_fpar_type dt dims x =
+  match dims, x with
+  | [], false -> dt
+  | h::t, false -> Array ((get_var_type dt t), Some h)
+  | dims, true -> Array ((get_var_type dt dims), None)
