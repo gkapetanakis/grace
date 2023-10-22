@@ -82,12 +82,12 @@ and pr_expr off enable ex =
     pr_func_call (off ^ sep) false (get_node fc) ^ ")"
   | Signed (op, e) ->
     off ^ "Signed(" ^ endl ^
-    pr_uarit (off ^ sep) true op ^ ", " ^
+    pr_uarit (off ^ sep) true op ^
     pr_expr (off ^ sep) false (get_node e) ^ ")"
   | AritOp (e1, op, e2) ->
     off ^ "AritOp(" ^ endl ^
-    pr_expr (off ^ sep) true (get_node e1) ^ ", " ^
-    pr_arit (off ^ sep) true op ^ ", " ^
+    pr_expr (off ^ sep) true (get_node e1) ^
+    pr_arit (off ^ sep) true op ^
     pr_expr (off ^ sep) false (get_node e2) ^ ")"
   in pr_enable str enable
 
@@ -103,13 +103,13 @@ let rec pr_cond off enable cond =
   let str = match cond with
   | Comp (e1, cond, e2) ->
     off ^ "Comp(" ^ endl ^
-    pr_expr (off ^ sep) true (get_node e1)  ^ ", " ^
-    pr_comp (off ^ sep) true cond ^ ", " ^
+    pr_expr (off ^ sep) true (get_node e1)  ^
+    pr_comp (off ^ sep) true cond ^
     pr_expr (off ^ sep) false (get_node e2)  ^ ")"
   | Logic (c1, log, c2) ->
     off ^ "Logic(" ^ endl ^
-    pr_cond (off ^ sep) true (get_node c1)  ^ ", " ^
-    pr_logic (off ^ sep) true log ^ ", " ^
+    pr_cond (off ^ sep) true (get_node c1)  ^
+    pr_logic (off ^ sep) true log ^
     pr_cond (off ^ sep) false (get_node c2)  ^ ")"
   | Not c ->
     off ^ "Not(" ^ endl ^
