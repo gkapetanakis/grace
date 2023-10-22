@@ -7,3 +7,8 @@
 (menhir
  (modules tokens)
  (flags --only-tokens))
+
+(menhir
+ (modules parser tokens)
+ (merge_into parser)
+ (flags --external-tokens Tokens))

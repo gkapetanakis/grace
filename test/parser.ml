@@ -6,7 +6,8 @@ let () =
     let lexbuf = Lexing.from_channel chan in
     try
       let ast_node = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
-      Grace_lib.Print_ast.pr_func_def "" true (Ast.get_node ast_node)
+      print_string
+      (Grace_lib.Print_ast.pr_func_def "" true (Grace_lib.Ast.get_node ast_node))
     with
     | Grace_lib.Error.Lexer_error (_, msg) -> prerr_endline msg
     | Grace_lib.Parser.Error ->
