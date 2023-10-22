@@ -6,6 +6,7 @@
 (* fun a(): nothing
    fun b(ref x: int): int
    fun c(x: int[]; y: char): char *)
+open Error
 
 type func_status = Defined | Declared
 type entry_type =
@@ -30,8 +31,6 @@ type scope = {
   mutable entries: entry list;
 }
 type symbol_table = scope list ref
-
-exception Symbol_table_exception of string
 
 let insert_to_scope (entry : entry) (scope : scope) =
   scope.entries <- entry :: scope.entries

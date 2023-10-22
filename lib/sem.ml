@@ -1,7 +1,6 @@
 open Ast
 open Symbol
-
-exception Semantic_error of loc * string
+open Error
 
 let verify_var ({loc; node = (_, dt)} : var node) =
   let rec data_walk = function
