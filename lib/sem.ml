@@ -2,14 +2,16 @@ open Ast
 open Symbol
 open Error
 
+(* ensures that defined variables conform to the language's spec *)
 let verify_var ({loc; node = (_, dt)} : var node) =
-  let rec data_walk = function
-  | Array(_, None) -> raise (Semantic_error (loc, "Array must have size"))
-  | Array(t, _) -> data_walk t
+  let rec aux = function
+  | Array(_, None) -> raise (Semantic_error (loc, "Missing array size is not permitted here"))
+  | Array(t, _) -> aux t
   | _ -> () in
-  data_walk dt
+  aux dt
 
-let verify_param ({loc; node = (id, t, _)} : param node ) =
+(* ensures that defined function parameters conform to the language's spec *)
+let verify_param ({loc; node = (id, t, _)} : param node) =
   match t with
   | Array(t, None) -> verify_var {loc; node = (id, t)}
   | t -> verify_var {loc; node = (id, t)}
@@ -23,12 +25,23 @@ let comp_var_param va par =
     | Array(t1, _), Array(t2, None) -> t1 = t2
     | _ -> t1 = t2
 
+(*
+  1. verify that the variable type is well-defined
+  2. verify that the variable is not defined twice in the same scope
+  3. insert the variable into the symbol table
+*)
 let sem_var ({loc; node = (id, t)} : var node) sym_tbl =
   verify_var {loc; node = (id, t)};
   match lookup id sym_tbl with
   | Some _ -> raise (Semantic_error (loc, "Variable already declared"))
   | None -> insert {id = id; info = Variable (id, t)} sym_tbl
 
+(*
+  1. verify that function parameter type is well-defined
+  2. verify that array parameters are passed by reference
+  3. verify that function parameter is not defined twice in the same function
+  4. insert the function parameter into the symbol table
+*)
 let sem_param ({loc; node = (id, t, pass)} as param: param node) sym_tbl =
   verify_param param;
   let check_type () = match t, pass with
@@ -40,6 +53,10 @@ let sem_param ({loc; node = (id, t, pass)} as param: param node) sym_tbl =
   | Some _ -> raise (Semantic_error (loc, "Parameter already declared"))
   | None -> insert {id = id; info = Parameter (id, t, pass)} sym_tbl
 
+(*
+  1. verify that lvalue exists in the symbol table (unless it's a string)
+  2. verify that array access expression evaluates to int
+*)
 let rec sem_l_value ({loc; node = lv} : l_value node) sym_tbl =
   match lv with
   | Id id ->
@@ -156,8 +173,3 @@ let sem_func_def ({loc; node = (h, _, _)} : func_def node) sym_tbl =
         else raise (Semantic_error (loc, "Function declaration and definition mismatch"))
       | _ -> raise (Semantic_error (loc, "Name is not a function"))
     )
-
-(*
-let sem_local_def _ _ = ()
-*)
-
