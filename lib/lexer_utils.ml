@@ -29,3 +29,46 @@ let keyword_table =
   ]
 
 let get_loc lexbuf = (lexbuf.Lexing.lex_start_p, lexbuf.Lexing.lex_curr_p)
+
+let string_of_token = function
+  | CHAR -> "char"
+  | INT -> "int"
+  | NOTHING -> "nothing"
+  | LIT_CHAR c -> Printf.sprintf "char_lit (%c)" c
+  | LIT_INT i -> Printf.sprintf "int_lit (%d)" i
+  | LIT_STR s -> Printf.sprintf "str_lit (%s)" s
+  | ID i -> Printf.sprintf "id (%s)" i
+  | VAR -> "var"
+  | FUN -> "fun"
+  | REF -> "ref"
+  | RETURN -> "return"
+  | IF -> "if"
+  | THEN -> "then"
+  | ELSE -> "else"
+  | WHILE -> "while"
+  | DO -> "do"
+  | EQ -> "equal"
+  | NOT_EQ -> "not_equal"
+  | MORE -> "greater"
+  | LESS -> "lesser"
+  | MORE_EQ -> "greater_equal"
+  | LESS_EQ -> "lesser_equal"
+  | AND -> "and"
+  | OR -> "or"
+  | NOT -> "not"
+  | PLUS -> "plus"
+  | MINUS -> "minus"
+  | MULT -> "star"
+  | DIV -> "div"
+  | MOD -> "mod"
+  | LEFT_PAR -> "lparen"
+  | RIGHT_PAR -> "rparen"
+  | LEFT_BRACKET -> "lbracket"
+  | RIGHT_BRACKET -> "rbracket"
+  | LEFT_CURL -> "lbrace"
+  | RIGHT_CURL -> "rbrace"
+  | COMMA -> "comma"
+  | COLON -> "colon"
+  | SEMICOLON -> "semicolon"
+  | ASSIGN -> "larrow"
+  | EOF -> "eof"

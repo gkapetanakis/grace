@@ -1,9 +1,9 @@
 (library
  (name grace_lib))
 
+(ocamllex
+ (modules lexer))
+
 (menhir
  (modules tokens)
  (flags --only-tokens))
-
-(ocamllex
- (modules lexer))

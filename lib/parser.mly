@@ -17,8 +17,6 @@
 %nonassoc THEN
 %nonassoc ELSE
 
-%start <unit> program
-
 (* --- some ideas for what the final types will look like? --- *)
 %start <Ast.func_def Ast.node> program
 
