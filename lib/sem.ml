@@ -146,7 +146,7 @@ let sem_func_def ({loc; node = (h, _, _)} : func_def node) sym_tbl =
   match h.node with
   | (id,_,_) ->
     match lookup id sym_tbl with
-    | None -> raise (Semantic_error (loc, "Function not declared"))
+    | None -> insert {id = id; info = Function {header = h.node; status = Defined}} sym_tbl
     | Some {info; _} -> (
       match info with
       | Function ({header;_} as f) ->

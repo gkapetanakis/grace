@@ -12,7 +12,7 @@ let string_of_loc
   Printf.sprintf "File: %s, line: %d, column: %d" filename line col
 
 let pr_error = function
-| Symbol_table_exception s -> print_string ("Symbol table exception: " ^ s)
-| Semantic_error (l, s) -> print_string ("Semantic error at " ^ (string_of_loc l) ^ ": " ^ s)
-| Lexer_error (l, s) -> print_string ("Lexer error at " ^ (string_of_loc l) ^ ": " ^ s)
+| Symbol_table_exception s -> prerr_string ("Symbol table exception: " ^ s)
+| Semantic_error (l, s) -> prerr_string ("Semantic error at " ^ (string_of_loc l) ^ ": " ^ s)
+| Lexer_error (l, s) -> prerr_string ("Lexer error at " ^ (string_of_loc l) ^ ": " ^ s)
 | err -> raise err

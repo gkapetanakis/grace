@@ -43,7 +43,7 @@
 %%
 
 let program :=
-  | fd = func_def; EOF;
+  | midrule({ Symbol.open_scope tbl }); fd = func_def; midrule({ Symbol.close_scope tbl }); EOF;
     { fd }
 
 let func_def :=

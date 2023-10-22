@@ -61,7 +61,7 @@ let lookup id sym_tbl = lookup_n 0 id !sym_tbl
 let lookup_all id sym_tbl = lookup_n (List.length !sym_tbl - 1) id !sym_tbl
 
 let open_scope sym_tbl =
-  sym_tbl := [] :: !sym_tbl
+  sym_tbl := {entries = []} :: !sym_tbl
 
 let close_scope sym_tbl =
   match !sym_tbl with
