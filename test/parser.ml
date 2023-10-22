@@ -8,9 +8,7 @@ let () =
     try
       let ast_node = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
       print_string
-      (Grace_lib.Print_ast.pr_func_def "" true (Grace_lib.Ast.get_node ast_node));
-      print_string "Diamond Hozu\n"
-    with
-    | err -> Grace_lib.Error.pr_error err
+        (Grace_lib.Print_ast.pr_func_def "" true (Grace_lib.Ast.get_node ast_node))
+    with err -> Grace_lib.Error.pr_error err
   in
-  List.iter test filenames
+    List.iter test filenames

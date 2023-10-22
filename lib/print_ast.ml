@@ -157,9 +157,9 @@ and pr_block off enable stmts =
   pr_enable str enable
 
 let pr_header off enable ((id, pl, data) : header) =
-  let str = off ^ "Header(" ^ "id: " ^ id ^ ", fpar_defs: " ^ endl ^
-    String.concat "" (List.mapi (fun i f -> pr_param (off ^ sep) (i = List.length pl - 1) (get_node f)) pl) ^
-    ", data_type: " ^ pr_data "" false data ^ ")"
+  let str = off ^ "Header(" ^ endl ^ off ^ sep ^ "id: " ^ id ^ endl ^ off ^ sep ^ "fpar_defs: " ^ endl ^
+    String.concat "" (List.mapi (fun i f -> pr_param (off ^ sep ^ sep) (i = List.length pl - 1) (get_node f)) pl) ^
+    off ^ sep ^ "data_type: " ^ pr_data "" false data ^ ")"
   in pr_enable str enable
 
 let pr_func_decl off enable head =
@@ -178,5 +178,5 @@ and pr_local_def off enable ld =
   let str = match ld with
     | FuncDef fd -> off ^ "FuncDef: " ^ endl ^ pr_func_def (off ^ sep) false (get_node fd)
     | FuncDecl fd -> off ^ "FuncDecl: " ^ endl ^ pr_func_decl (off ^ sep) false (get_node fd)
-    | Var vd -> off ^ "Var: " ^ endl ^ pr_var (off ^ sep) false (get_node vd) in
+    | Var vd -> off ^ "Var: " ^ endl ^ pr_var (off ^ sep) true (get_node vd) in
   pr_enable str enable
