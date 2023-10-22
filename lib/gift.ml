@@ -51,8 +51,8 @@ let wrap_stmt loc stmt sym_tbl =
   Sem.sem_stmt node sym_tbl;
   node
 
-let wrap_header loc header sym_tbl =
-  let node = {loc; node = header} in
+let wrap_header loc id param_n_list ret_data sym_tbl =
+  let node = {loc; node = (id, param_n_list, ret_data)} in
   Sem.sem_header node sym_tbl;
   node
 
@@ -65,3 +65,9 @@ let wrap_func_def loc head_n local_n_l blk_n sym_tbl =
   let node = {loc; node = (head_n, local_n_l, blk_n)} in
   Sem.sem_func_def node sym_tbl;
   node
+
+let wrap_local_def local_n =
+  match local_n with
+  | `FuncDef fd -> [FuncDef fd]
+  | `FuncDecl fd -> [FuncDecl fd]
+  | `VarDefList vl -> List.map (fun v -> Var v) vl
