@@ -47,7 +47,7 @@ let program :=
     { fd }
 
 let func_def :=
-  | h = header; midrule({ Symbol.open_scope tbl }) (* move it to header? *); ld = flatten(list(local_def)); b = block; midrule({ Symbol.close_scope tbl });
+  | h = header; ld = flatten(list(local_def)); b = block; midrule({ Symbol.close_scope tbl });
     { wrap_func_def $loc(h) (h, ld, b) tbl }
 
 let header := 

@@ -17,7 +17,11 @@ let () =
             tokenize_and_print ()
       with err -> Grace_lib.Error.pr_error err
     in
-      print_endline filename;
-      tokenize_and_print ()
+    print_endline filename;
+    tokenize_and_print ()
   in
-    List.iteri (fun i f -> test f; if i < List.length filenames - 1 then print_newline ()) filenames
+  List.iteri
+    (fun i f ->
+      test f;
+      if i < List.length filenames - 1 then print_newline ())
+    filenames
