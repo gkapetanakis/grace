@@ -68,7 +68,7 @@ let rec sem_l_value ({ loc; node = lv } : l_value node) sym_tbl =
       | None ->
           raise (Semantic_error (loc, "Variable not defined in any scope"))
       | Some entry -> entry_type entry)
-  | LString ls -> Array (Char, Some (String.length ls + 1))
+  | LString ls -> Array (Char, Some (String.length ls))
   | ArrayAccess (lv, e) ->
       if sem_expr e sym_tbl = Int then
         match sem_l_value lv sym_tbl with

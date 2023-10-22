@@ -20,18 +20,19 @@ let pr_entry off enable {id;info} =
 let pr_scope off enable {entries} =
   let str = off ^ "Scope: " ^ endl ^
     String.concat ""
-      (List.mapi 
-        (fun i entry ->
-          pr_entry (off ^ sep) (i = List.length entries - 1) entry) entries)
+      (List.rev
+        (List.mapi 
+          (fun i entry ->
+            pr_entry (off ^ sep) (i = List.length entries - 1) entry) entries))
   in  
   pr_enable str enable
 
-let pr_symbol_table off enable (sym_tbl : symbol_table) =
-  let sym_tbl = !sym_tbl in
+let pr_symbol_table off enable sym_tbl =
   let str = off ^ "Symbol Table: " ^ endl ^
     String.concat ""
-      (List.mapi 
-        (fun i scope ->
-          pr_scope (off ^ sep) (i = List.length sym_tbl - 1) scope) sym_tbl)
+      (List.rev
+        (List.mapi 
+          (fun i scope ->
+            pr_scope (off ^ sep) (i = List.length !sym_tbl - 1) scope) !sym_tbl))
   in
   pr_enable str enable
