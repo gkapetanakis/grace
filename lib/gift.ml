@@ -16,7 +16,7 @@ let var_def_to_list loc ids vt : var node list =
     | id :: ids -> aux ids vt ({loc = loc; node = (id,vt)} :: acc)
   in aux ids vt []
 
-let wrap_var loc id t sym_tbl =
+let wrap_var loc (id,t) sym_tbl =
   let node = {loc; node = (id, t)} in
   Sem.sem_var node sym_tbl;
   node
