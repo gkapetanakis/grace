@@ -36,7 +36,7 @@ let sem_var ({ loc; node = id, t } : var node) sym_tbl =
   verify_var { loc; node = (id, t) };
   match lookup id sym_tbl with
   | Some _ -> raise (Semantic_error (loc, "Variable already declared"))
-  | None -> insert { id; info = Variable (id, t) } sym_tbl
+  | None -> insert loc { id; info = Variable (id, t) } sym_tbl
 
 (*
   1. verify that function parameter type is well-defined
@@ -55,7 +55,7 @@ let sem_param ({ loc; node = id, t, pass } as param : param node) sym_tbl =
   check_type ();
   match lookup id sym_tbl with
   | Some _ -> raise (Semantic_error (loc, "Parameter already declared"))
-  | None -> insert { id; info = Parameter (id, t, pass) } sym_tbl
+  | None -> insert loc { id; info = Parameter (id, t, pass) } sym_tbl
 
 (*
   1. verify that lvalue exists in the symbol table (unless it's a string)
@@ -158,7 +158,7 @@ let sem_func_decl
   match lookup id sym_tbl with
   | Some _ -> raise (Semantic_error (loc, "Function already declared"))
   | None ->
-      insert
+      insert loc
         { id; info = Function { header = head; status = Declared } }
         sym_tbl
 
@@ -172,7 +172,7 @@ let sem_func_def ({ loc; node = h, _, _ } : func_def node) sym_tbl =
   | id, _, _ -> (
       match lookup id sym_tbl with
       | None ->
-          insert
+          insert loc
             { id; info = Function { header = h.node; status = Defined } }
             sym_tbl
       | Some { info; _ } -> (

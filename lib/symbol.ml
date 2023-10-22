@@ -21,11 +21,11 @@ type symbol_table = scope list ref
 let insert_to_scope (entry : entry) (scope : scope) =
   scope.entries <- entry :: scope.entries
 
-let insert (entry : entry) (sym_tbl : symbol_table) =
+let insert loc (entry : entry) (sym_tbl : symbol_table) =
   match !sym_tbl with
   | hd :: _ -> insert_to_scope entry hd
   | [] ->
-      raise (Symbol_table_exception "Tried to insert into empty symbol table")
+      raise (Symbol_table_exception (loc, "Tried to insert into empty symbol table"))
 
 let lookup_in_scope (id : string) (scope : scope) =
   let rec aux id lst =
@@ -49,7 +49,7 @@ let lookup id sym_tbl = lookup_n 0 id !sym_tbl
 let lookup_all id sym_tbl = lookup_n (List.length !sym_tbl - 1) id !sym_tbl
 let open_scope sym_tbl = sym_tbl := { entries = [] } :: !sym_tbl
 
-let close_scope sym_tbl =
+let close_scope loc sym_tbl =
   match !sym_tbl with
   | _ :: tl -> sym_tbl := tl
-  | [] -> raise (Symbol_table_exception "Tried to close nonexistent scope")
+  | [] -> raise (Symbol_table_exception (loc, "Tried to close nonexistent scope"))

@@ -43,11 +43,11 @@
 %%
 
 let program :=
-  | midrule({ Symbol.open_scope tbl }); fd = func_def; midrule({ Symbol.close_scope tbl }); EOF;
+  | midrule({ Symbol.open_scope tbl }); fd = func_def; midrule({ Symbol.close_scope $loc tbl }); EOF;
     { fd }
 
 let func_def :=
-  | h = header; ld = flatten(list(local_def)); b = block; midrule({ Symbol.close_scope tbl });
+  | h = header; ld = flatten(list(local_def)); b = block;
     { wrap_func_def $loc(h) (h, ld, b) tbl }
 
 let header := 
