@@ -130,7 +130,9 @@ let sem_stmt ({ loc; node } : stmt node) sym_tbl =
       let aux t1 t2 tt = t1 = tt && t2 = tt in
       let t1 = sem_l_value lv sym_tbl in
       let t2 = sem_expr e sym_tbl in
-      if aux t1 t2 Int || aux t1 t2 Char then ()
+      if l_value_dep_on_l_string lv.node
+      then raise (Semantic_error (loc, "Can't assign to a string"))
+      else if aux t1 t2 Int || aux t1 t2 Char then ()
       else raise (Semantic_error (loc, "Assignment type mismatch"))
   | Return ex -> (
       let ex_typ =

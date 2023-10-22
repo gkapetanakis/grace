@@ -69,7 +69,7 @@ and end_character c = parse
     |   _                           { raise (Lexer_error (get_loc lexbuf, "Improper use of character syntax"))}
 
 and str buf = parse
-        '"'                         { LIT_STR (Buffer.contents buf)                         }
+        '"'                         { Buffer.add_char buf '\000'; LIT_STR (Buffer.contents buf) }
     |   '\\'                        {   let str_exec_func c lexbuf =
                                             Buffer.add_char buf c;
                                             str buf lexbuf

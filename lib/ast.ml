@@ -64,3 +64,8 @@ let get_param dt dims x =
   | [], false -> dt
   | h :: t, false -> Array (get_var dt t, Some h)
   | dims, true -> Array (get_var dt dims, None)
+
+let rec l_value_dep_on_l_string = function
+  | Id _ -> false
+  | LString _ -> true
+  | ArrayAccess (lv, _) -> l_value_dep_on_l_string (get_node lv)
