@@ -1,3 +1,4 @@
+program1.grc
 fun
 id (main)
 lparen
@@ -31,4 +32,106 @@ int_lit (10)
 rbracket
 semicolon
 lbrace
+rbrace
+
+program2.grc
+fun
+id (main)
+lparen
+rparen
+colon
+nothing
+fun
+id (aux)
+lparen
+ref
+id (chars)
+colon
+char
+lbracket
+rbracket
+lbracket
+int_lit (1)
+rbracket
+rparen
+colon
+nothing
+lbrace
+return
+semicolon
+rbrace
+var
+id (c)
+colon
+char
+lbracket
+int_lit (1)
+rbracket
+semicolon
+var
+id (d)
+colon
+char
+lbracket
+int_lit (1)
+rbracket
+semicolon
+var
+id (e)
+colon
+char
+lbracket
+int_lit (2)
+rbracket
+lbracket
+int_lit (1)
+rbracket
+semicolon
+lbrace
+id (c)
+lbracket
+int_lit (0)
+rbracket
+larrow
+char_lit (y)
+semicolon
+id (d)
+lbracket
+int_lit (0)
+rbracket
+larrow
+char_lit (g)
+semicolon
+id (e)
+lbracket
+int_lit (0)
+rbracket
+lbracket
+int_lit (0)
+rbracket
+larrow
+id (c)
+lbracket
+int_lit (0)
+rbracket
+semicolon
+id (e)
+lbracket
+int_lit (1)
+rbracket
+lbracket
+int_lit (0)
+rbracket
+larrow
+id (d)
+lbracket
+int_lit (0)
+rbracket
+semicolon
+return
+id (aux)
+lparen
+id (e)
+rparen
+semicolon
 rbrace
