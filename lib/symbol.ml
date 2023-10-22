@@ -25,7 +25,7 @@ let insert loc (entry : entry) (sym_tbl : symbol_table) =
   match !sym_tbl with
   | hd :: _ -> insert_to_scope entry hd
   | [] ->
-      raise (Symbol_table_exception (loc, "Tried to insert into empty symbol table"))
+      raise (Grace_error(Symbol_table_error, (loc, "Tried to insert into empty symbol table")))
 
 let lookup_in_scope (id : string) (scope : scope) =
   let rec aux id lst =
@@ -52,4 +52,4 @@ let open_scope sym_tbl = sym_tbl := { entries = [] } :: !sym_tbl
 let close_scope loc sym_tbl =
   match !sym_tbl with
   | _ :: tl -> sym_tbl := tl
-  | [] -> raise (Symbol_table_exception (loc, "Tried to close nonexistent scope"))
+  | [] -> raise (Grace_error(Symbol_table_error, (loc, "Tried to close nonexistent scope")))

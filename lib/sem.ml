@@ -6,7 +6,7 @@ open Error
 let verify_var ({ loc; node = _, dt } : var node) =
   let rec aux = function
     | Array (_, None) ->
-        raise (Semantic_error (loc, "Missing array size is not permitted here"))
+        raise (Grace_error(Semantic_error, (loc, "Missing array size is not permitted here")))
     | Array (t, _) -> aux t
     | _ -> ()
   in
@@ -35,7 +35,7 @@ let comp_var_param va par =
 let sem_var ({ loc; node = id, t } : var node) sym_tbl =
   verify_var { loc; node = (id, t) };
   match lookup id sym_tbl with
-  | Some _ -> raise (Semantic_error (loc, "Variable already declared"))
+  | Some _ -> raise (Grace_error(Semantic_error, (loc, "Variable already declared")))
   | None -> insert loc { id; info = Variable (id, t) } sym_tbl
 
 (*
@@ -49,12 +49,12 @@ let sem_param ({ loc; node = id, t, pass } as param : param node) sym_tbl =
   let check_type () =
     match (t, pass) with
     | Array _, ByValue ->
-        raise (Semantic_error (loc, "Array must be passed by reference"))
+        raise (Grace_error(Semantic_error, (loc, "Array must be passed by reference")))
     | _ -> ()
   in
   check_type ();
   match lookup id sym_tbl with
-  | Some _ -> raise (Semantic_error (loc, "Parameter already declared"))
+  | Some _ -> raise (Grace_error(Semantic_error, (loc, "Parameter already declared")))
   | None -> insert loc { id; info = Parameter (id, t, pass) } sym_tbl
 
 (*
@@ -66,7 +66,7 @@ let rec sem_l_value ({ loc; node = lv } : l_value node) sym_tbl =
   | Id id -> (
       match lookup_all id sym_tbl with
       | None ->
-          raise (Semantic_error (loc, "Variable not defined in any scope"))
+          raise (Grace_error(Semantic_error, (loc, "Variable not defined in any scope")))
       | Some entry -> entry_type entry)
   | LString ls -> Array (Char, Some (String.length ls))
   | ArrayAccess (lv, e) ->
@@ -74,9 +74,9 @@ let rec sem_l_value ({ loc; node = lv } : l_value node) sym_tbl =
         match sem_l_value lv sym_tbl with
         | Array (t, _) -> t
         | _ ->
-            raise (Semantic_error (loc, "Array access must be of type array"))
+            raise (Grace_error(Semantic_error, (loc, "Array access must be of type array")))
       else
-        raise (Semantic_error (loc, "Array access index must be of type int"))
+        raise (Grace_error(Semantic_error, (loc, "Array access index must be of type int")))
 
 and sem_expr ({ loc; node = ex } : expr node) sym_tbl =
   match ex with
@@ -86,34 +86,34 @@ and sem_expr ({ loc; node = ex } : expr node) sym_tbl =
   | EFuncCall fc -> sem_func_call fc sym_tbl
   | Signed (_, e) ->
       if sem_expr e sym_tbl = Int then Int
-      else raise (Semantic_error (loc, "Signed expression must be of type int"))
+      else raise (Grace_error(Semantic_error, (loc, "Signed expression must be of type int")))
   | AritOp (e1, _, e2) ->
       if sem_expr e1 sym_tbl = Int && sem_expr e2 sym_tbl = Int then Int
       else
-        raise (Semantic_error (loc, "Arithmetic operators must be of type int"))
+        raise (Grace_error(Semantic_error, (loc, "Arithmetic operators must be of type int")))
 
 and sem_func_call ({ loc; node = id, el } : func_call node) sym_tbl =
   let rec check_params (args : expr node list) (param_list : param node list) =
     match (args, param_list) with
     | [], [] -> true
-    | [], _ -> raise (Semantic_error (loc, "Too few arguments"))
-    | _, [] -> raise (Semantic_error (loc, "Too many arguments"))
+    | [], _ -> raise (Grace_error(Semantic_error, (loc, "Too few arguments")))
+    | _, [] -> raise (Grace_error(Semantic_error, (loc, "Too many arguments")))
     | arg :: args, param :: params ->
         if
           comp_var_param
             { loc = arg.loc; node = ("", sem_expr arg sym_tbl) }
             param
         then check_params args params
-        else raise (Semantic_error (loc, "Argument type mismatch"))
+        else raise (Grace_error(Semantic_error, (loc, "Argument type mismatch")))
   in
   match lookup_all id sym_tbl with
-  | None -> raise (Semantic_error (loc, "Function not defined in any scope"))
+  | None -> raise (Grace_error(Semantic_error, (loc, "Function not defined in any scope")))
   | Some { info; _ } -> (
       match info with
       | Function { header = _, params, data; _ } ->
           if check_params el params then data
-          else raise (Semantic_error (loc, "Function call type mismatch"))
-      | _ -> raise (Semantic_error (loc, "Name is not a function")))
+          else raise (Grace_error(Semantic_error, (loc, "Function call type mismatch")))
+      | _ -> raise (Grace_error(Semantic_error, (loc, "Name is not a function"))))
 
 let sem_cond ({ loc; node } : cond node) sym_tbl =
   match node with
@@ -121,7 +121,7 @@ let sem_cond ({ loc; node } : cond node) sym_tbl =
       let aux e1 e2 tt = sem_expr e1 sym_tbl = tt && sem_expr e2 sym_tbl = tt in
       if aux e1 e2 Int || aux e1 e2 Char then ()
       else
-        raise (Semantic_error (loc, "Comparison must be of type int or char"))
+        raise (Grace_error(Semantic_error, (loc, "Comparison must be of type int or char")))
   | _ -> ()
 
 let sem_stmt ({ loc; node } : stmt node) sym_tbl =
@@ -131,9 +131,9 @@ let sem_stmt ({ loc; node } : stmt node) sym_tbl =
       let t1 = sem_l_value lv sym_tbl in
       let t2 = sem_expr e sym_tbl in
       if l_value_dep_on_l_string lv.node
-      then raise (Semantic_error (loc, "Can't assign to a string"))
+      then raise (Grace_error(Semantic_error, (loc, "Can't assign to a string")))
       else if aux t1 t2 Int || aux t1 t2 Char then ()
-      else raise (Semantic_error (loc, "Assignment type mismatch"))
+      else raise (Grace_error(Semantic_error, (loc, "Assignment type mismatch")))
   | Return ex -> (
       let ex_typ =
         match ex with None -> Nothing | Some e -> sem_expr e sym_tbl
@@ -143,20 +143,20 @@ let sem_stmt ({ loc; node } : stmt node) sym_tbl =
       match entry.info with
       | Function _ ->
           if ex_typ = entry_type entry then ()
-          else raise (Semantic_error (loc, "Return type mismatch"))
-      | _ -> raise (Semantic_error (loc, "Return statement outside function")))
+          else raise (Grace_error(Semantic_error, (loc, "Return type mismatch")))
+      | _ -> raise (Grace_error(Semantic_error, (loc, "Return statement outside function"))))
   | _ -> ()
 
 let sem_header ({ loc; node = _, _, data } : header node) _ =
   match data with
-  | Array _ -> raise (Semantic_error (loc, "Return type can't be an array"))
+  | Array _ -> raise (Grace_error(Semantic_error, (loc, "Return type can't be an array")))
   | _ -> ()
 
 let sem_func_decl
     ({ loc; node = { node = (id, _, _) as head; _ } } : func_decl node) sym_tbl
     =
   match lookup id sym_tbl with
-  | Some _ -> raise (Semantic_error (loc, "Function already declared"))
+  | Some _ -> raise (Grace_error(Semantic_error, (loc, "Function already declared")))
   | None ->
       insert loc
         { id; info = Function { header = head; status = Declared } }
@@ -179,10 +179,10 @@ let sem_func_def ({ loc; node = h, _, _ } : func_def node) sym_tbl =
           match info with
           | Function ({ header; _ } as f) ->
               if f.status = Defined then
-                raise (Semantic_error (loc, "Function already defined"))
+                raise (Grace_error(Semantic_error, (loc, "Function already defined")))
               else if compare_heads h.node header then f.status <- Defined
               else
                 raise
-                  (Semantic_error
-                     (loc, "Function declaration and definition mismatch"))
-          | _ -> raise (Semantic_error (loc, "Name is not a function"))))
+                  (Grace_error(Semantic_error,
+                     (loc, "Function declaration and definition mismatch")))
+          | _ -> raise (Grace_error(Semantic_error, (loc, "Name is not a function")))))

@@ -1,8 +1,11 @@
 type loc = Lexing.position * Lexing.position
 
-exception Symbol_table_exception of loc * string
-exception Semantic_error of loc * string
-exception Lexer_error of loc * string
+type err_type =
+  | Symbol_table_error
+  | Semantic_error
+  | Lexer_error
+
+exception Grace_error of err_type * (loc * string)
 
 let string_of_loc
     ( {
@@ -16,10 +19,13 @@ let string_of_loc
   Printf.sprintf "File: %s, line: %d, column: %d" filename line col
 
 let pr_error = function
-  | Symbol_table_exception (l,s) ->
-    prerr_string ("Symbol table error at " ^ string_of_loc l ^ ": " ^ s)
-  | Semantic_error (l, s) ->
-    prerr_string ("Semantic error at " ^ string_of_loc l ^ ": " ^ s)
-  | Lexer_error (l, s) ->
-    prerr_string ("Lexer error at " ^ string_of_loc l ^ ": " ^ s)
+  | Grace_error (t, (l, s)) -> (
+    match t with
+    | Symbol_table_error ->
+      prerr_string ("Symbol table error at " ^ string_of_loc l ^ ": " ^ s)
+    | Semantic_error ->
+      prerr_string ("Semantic error at " ^ string_of_loc l ^ ": " ^ s)
+    | Lexer_error ->
+      prerr_string ("Lexer error at " ^ string_of_loc l ^ ": " ^ s)
+  )
   | err -> raise err

@@ -51,22 +51,22 @@ rule token = parse
     |   '"'                         {   let buf = Buffer.create 17 in
                                             str buf lexbuf                                  }
     |   eof                         { EOF                                                   }
-    |   _ as c                      { raise (Lexer_error (get_loc lexbuf, "Bad character: '"^(String.make 1 c)^"'")) }
+    |   _ as c                      { raise (Grace_error (Lexer_error, (get_loc lexbuf, "Bad character: '"^(String.make 1 c)^"'"))) }
 and comment = parse             
         "$$"                        { token lexbuf                                          }
     |   '\n'                        { Lexing.new_line lexbuf; comment lexbuf                }
     |   _                           { comment lexbuf                                        }
-    |   eof                         { raise (Lexer_error (get_loc lexbuf, "Multiline comment does not terminate")) }
+    |   eof                         { raise (Grace_error (Lexer_error, (get_loc lexbuf, "Multiline comment does not terminate"))) }
 
 and character = parse
         '\\'                        { escape end_character lexbuf                           }
     |   chr as c                    { end_character c lexbuf                                }
-    |   eof                         { raise (Lexer_error (get_loc lexbuf, "Improper use of character syntax"))}
-    |   _ as c                      { raise (Lexer_error (get_loc lexbuf, "Bad character: '"^(String.make 1 c)^"'")) }
+    |   eof                         { raise (Grace_error (Lexer_error, (get_loc lexbuf, "Improper use of character syntax")))}
+    |   _ as c                      { raise (Grace_error (Lexer_error, (get_loc lexbuf, "Bad character: '"^(String.make 1 c)^"'"))) }
 
 and end_character c = parse
         '\''                        { LIT_CHAR c                                            }
-    |   _                           { raise (Lexer_error (get_loc lexbuf, "Improper use of character syntax"))}
+    |   _                           { raise (Grace_error (Lexer_error, (get_loc lexbuf, "Improper use of character syntax")))}
 
 and str buf = parse
         '"'                         { Buffer.add_char buf '\000'; LIT_STR (Buffer.contents buf) }
@@ -76,8 +76,8 @@ and str buf = parse
                                         in
                                         escape str_exec_func lexbuf                         }
     |   chr as c                    { Buffer.add_char buf c; str buf lexbuf                 }
-    |   eof                         { raise (Lexer_error (get_loc lexbuf, "String does not terminate")) }
-    |   _ as c                      { raise (Lexer_error (get_loc lexbuf, "Bad character: '"^(String.make 1 c)^"'")) }  
+    |   eof                         { raise (Grace_error (Lexer_error, (get_loc lexbuf, "String does not terminate"))) }
+    |   _ as c                      { raise (Grace_error (Lexer_error, (get_loc lexbuf, "Bad character: '"^(String.make 1 c)^"'"))) }  
 
 and escape exec_func = parse
         'n'                         { exec_func '\n' lexbuf                                 }
@@ -91,4 +91,4 @@ and escape exec_func = parse
                                         let dec_code = int_of_string ("0"^code) in
                                         let ascii_char = char_of_int dec_code in
                                             exec_func ascii_char lexbuf                     }
-    |   _ as c                      { raise (Lexer_error (get_loc lexbuf, "Bad escape: '\\"^(String.make 1 c)^"'")) }
+    |   _ as c                      { raise (Grace_error (Lexer_error, (get_loc lexbuf, "Bad escape: '\\"^(String.make 1 c)^"'"))) }
