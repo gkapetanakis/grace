@@ -21,11 +21,11 @@ let string_of_loc
 let pr_error = function
   | Grace_error (t, (l, s)) -> (
     match t with
-    | Symbol_table_error ->
-      prerr_string ("Symbol table error at " ^ string_of_loc l ^ ": " ^ s)
+    | Symbol_table_error -> 
+      prerr_endline ("Symbol table error at " ^ string_of_loc l ^ ": " ^ s)
     | Semantic_error ->
-      prerr_string ("Semantic error at " ^ string_of_loc l ^ ": " ^ s)
+      prerr_endline ("Semantic error at " ^ string_of_loc l ^ ": " ^ s)
     | Lexer_error ->
-      prerr_string ("Lexer error at " ^ string_of_loc l ^ ": " ^ s)
+      prerr_endline ("Lexer error at " ^ string_of_loc l ^ ": " ^ s)
   )
   | err -> raise err
