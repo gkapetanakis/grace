@@ -23,7 +23,7 @@ let pr_scope off enable {entries} =
       (List.rev
         (List.mapi 
           (fun i entry ->
-            pr_entry (off ^ sep) (i = List.length entries - 1) entry) entries))
+            pr_entry (off ^ sep) (i <> List.length entries - 1) entry) entries))
   in  
   pr_enable str enable
 
@@ -33,6 +33,6 @@ let pr_symbol_table off enable sym_tbl =
       (List.rev
         (List.mapi 
           (fun i scope ->
-            pr_scope (off ^ sep) (i = List.length !sym_tbl - 1) scope) !sym_tbl))
+            pr_scope (off ^ sep) (i <> List.length !sym_tbl - 1) scope) !sym_tbl))
   in
   pr_enable str enable

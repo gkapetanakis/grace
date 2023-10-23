@@ -103,7 +103,7 @@ and pr_func_call off enable (id, el) =
     ^ String.concat ""
         (List.mapi
            (fun i e ->
-             pr_expr (off ^ sep) (i = List.length el - 1) (get_node e))
+             pr_expr (off ^ sep) (i <> List.length el - 1) (get_node e))
            el)
     ^ ")"
   in
@@ -171,7 +171,7 @@ and pr_block off enable stmts =
     ^ String.concat ""
         (List.mapi
            (fun i s ->
-             pr_stmt (off ^ sep) (i = List.length stmts - 1) (get_node s))
+             pr_stmt (off ^ sep) (i <> List.length stmts - 1) (get_node s))
            stmts)
   in
   pr_enable str enable
@@ -181,9 +181,9 @@ let pr_header off enable ((id, pl, data) : header) =
     off ^ "Header(" ^ endl ^ off ^ sep ^ "id: " ^ id ^ endl ^ off ^ sep
     ^ "fpar_defs: " ^ endl
     ^ String.concat ""
-        (List.mapi
-           (fun i f ->
-             pr_param (off ^ sep ^ sep) (i = List.length pl - 1) (get_node f))
+        (List.map
+           (fun f ->
+             pr_param (off ^ sep ^ sep) true (get_node f))
            pl)
     ^ off ^ sep ^ "data_type: " ^ pr_data "" false data ^ ")"
   in
@@ -200,9 +200,9 @@ let rec pr_func_def off enable (head, ldl, block) =
     off ^ "FuncDef(" ^ endl
     ^ pr_header (off ^ sep) true (get_node head)
     ^ String.concat ""
-        (List.mapi
-           (fun i l ->
-             pr_local_def (off ^ sep) (i = List.length ldl - 1) (get_node l))
+        (List.map
+           (fun l ->
+             pr_local_def (off ^ sep) true (get_node l))
            ldl)
     ^ pr_block (off ^ sep) false (get_node block)
     ^ ")"
@@ -216,6 +216,6 @@ and pr_local_def off enable ld =
         off ^ "FuncDef: " ^ endl ^ pr_func_def (off ^ sep) false (get_node fd)
     | FuncDecl fd ->
         off ^ "FuncDecl: " ^ endl ^ pr_func_decl (off ^ sep) false (get_node fd)
-    | Var vd -> off ^ "Var: " ^ endl ^ pr_var (off ^ sep) true (get_node vd)
+    | Var vd -> off ^ "Var: " ^ endl ^ pr_var (off ^ sep) false (get_node vd)
   in
   pr_enable str enable
