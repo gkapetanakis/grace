@@ -1,8 +1,6 @@
 %{
   open Ast
   open Gift
-
-  let tbl : Symbol.symbol_table = ref []
 %}
 
 %left OR

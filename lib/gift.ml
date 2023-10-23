@@ -77,3 +77,5 @@ let wrap_local_def loc local_n =
 let wrap_block loc stmt_n_l =
   let node = { loc; node = stmt_n_l } in
   node
+
+let tbl : Symbol.symbol_table = ref []
