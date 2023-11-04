@@ -1,5 +1,6 @@
 (library
- (name grace_lib))
+ (name grace_lib)
+ (libraries llvm))
 
 (ocamllex
  (modules lexer))
