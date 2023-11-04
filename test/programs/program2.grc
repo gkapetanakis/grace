@@ -1,16 +1,19 @@
-fun main(): nothing
-  fun aux(ref chars: char[][1]): nothing
-  {
-    return;
-  }
+$$
+  Description:
+    a few variable definitions of scalar and array types and subsequent use of variables
+  Purpose:
+    check that variable definitions, array accesses and assignments work correctly
+$$
 
-  var c: char[1];
-  var d: char[1];
-  var e: char[2][1];
+fun main(): nothing
+  var a: int;
+  var b: char;
+  var c: int[5];
+  var d, e: char[2][3];
 {
-  c[0] <- 'y';
-  d[0] <- 'g';
-  e[0][0] <- c[0];
-  e[1][0] <- d[0];
-  return aux(e);
+  a <- 5;
+  b <- 'a';
+  c[0] <- a;
+  d[0][1] <- b;
+  e[0][2] <- d[0][1];
 }
