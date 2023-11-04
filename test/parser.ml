@@ -3,7 +3,7 @@ open Grace_lib
 let () =
   let dirname = "programs/" in
   let filenames =
-    [ "program12.grc" ]
+    [ "program4.grc" ]
   in
   let test filename =
     let chan = open_in (dirname ^ filename) in

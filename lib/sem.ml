@@ -184,10 +184,15 @@ let sem_func_def ({ loc; node = h } : header node) sym_tbl =
       | None -> ()
       | Some { info; _ } -> (
           match info with
-          | Function ({ header; _ } as f) ->
+          | Function f ->
               if f.status = Defined then
                 raise (Semantic_error (loc, "Function already defined"))
-              else if compare_heads h header then f.status <- Defined
+              else if compare_heads h f.header
+              then
+                (
+                  f.status <- Defined;
+                  f.header <- h
+                )
               else
                 raise
                   (Semantic_error

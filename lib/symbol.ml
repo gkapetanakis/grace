@@ -5,7 +5,7 @@ type func_status = Defined | Declared
 type entry_type =
   | Variable of Ast.var_def
   | Parameter of Ast.param_def
-  | Function of { header : Ast.header; mutable status : func_status }
+  | Function of { mutable header : Ast.header; mutable status : func_status }
 
 type entry = { id : string; info : entry_type }
 
