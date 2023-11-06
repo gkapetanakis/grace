@@ -1,12 +1,5 @@
-_writeChar writeChar
-_writeInteger writeInteger
-_writeString writeString
-_readChar readChar
-_readInteger readInteger
-_readString readString
-_ascii ascii
-_chr chr
 _strcat strcat
 _strcmp strcmp
 _strcpy strcpy
 _strlen strlen
+

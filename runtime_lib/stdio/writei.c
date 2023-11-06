@@ -1,5 +1,5 @@
 #include <stdio.h>
 
-void _writeInteger(int i) {
+void writeInteger(int i) {
     printf("%d", i);
 }

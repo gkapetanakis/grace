@@ -57,8 +57,67 @@ let strcat_t =
 let _ = Llvm.declare_function "strcat" strcat_t modulx
 
 (* Codegen functions *)
+(* -------- IMPORTANT ----------
+  Something to note is that when we execute some code then we might not end up in the same block as before.
+  E.g. we want to compile some code like this:
+  current_block:
+    ...
+    cond_val = compute cond
+    if cond_val = true then goto then else goto else
+  then:
+    compute stmt1
+    goto endif
+  else:
+    compute stmt2
+    goto endif
+  endif:
+    ...
 
+  Code1:
+    let cond_val = codegen_cond cond_n.node in
+    let icmp_ne =
+      Llvm.build_icmp Llvm.Icmp.Ne cond_val (c32 0) "if_cond" builder
+    in
+    let the_parent = Llvm.block_parent (Llvm.insertion_block builder) in
+    let the_then = Llvm.append_block context "then" the_parent in
+    let the_else = Llvm.append_block context "else" the_parent in
+    let the_endif = Llvm.append_block context "endif" the_parent in
+    Llvm.build_cond_br icmp_ne the_then the_else builder |> ignore;
+    Llvm.position_at_end the_then builder;
+    codegen_stmt (Option.get stmt_1_n_o).node;
+    Llvm.build_br the_endif builder |> ignore;
+    Llvm.position_at_end the_else builder;
+    if Option.is_some stmt_2_n_o then
+      codegen_stmt (Option.get stmt_2_n_o).node;
+    Llvm.build_br the_endif builder |> ignore;
+    Llvm.position_at_end the_endif builder)
 
+  Code2:
+    let the_parent = Llvm.block_parent (Llvm.insertion_block builder) in
+    let the_then = Llvm.append_block context "then" the_parent in
+    let the_else = Llvm.append_block context "else" the_parent in
+    let the_endif = Llvm.append_block context "endif" the_parent in
+    let cond_val = codegen_cond cond_n.node in
+    let icmp_ne =
+      Llvm.build_icmp Llvm.Icmp.Ne cond_val (c32 0) "if_cond" builder
+    in
+    Llvm.build_cond_br icmp_ne the_then the_else builder |> ignore;
+    Llvm.position_at_end the_then builder;
+    codegen_stmt (Option.get stmt_1_n_o).node;
+    Llvm.build_br the_endif builder |> ignore;
+    Llvm.position_at_end the_else builder;
+    if Option.is_some stmt_2_n_o then
+      codegen_stmt (Option.get stmt_2_n_o).node;
+    Llvm.build_br the_endif builder |> ignore;
+    Llvm.position_at_end the_endif builder)
+
+  Code1 is correct (or so I think currently...). Code2 is incorrent. Explanation:
+  When we call codegen_cond we might end up in a different block than the current one.
+  This is because codegen_cond might put us in some other block. So we want blocks then, else, endif to be placed
+  after that block (or in relation to that blocks parent).
+  This is why we need to call Llvm.block_parent (Llvm.insertion_block builder) after computing the cond_val
+  (and icmp_ne variable).
+*)
 let rec codegen_expr = function
   | Ast.LitInt i -> c32 i
   | Ast.LitChar c -> c8 (int_of_char c)
@@ -95,11 +154,44 @@ let rec codegen_cond = function
       match ulo with
       | Ast.Not -> Llvm.build_not (codegen_cond cond_n.node) "not_tmp" builder)
   | Ast.BinLogicOp (cond_1_n, blo, cond_2_n) -> (
-      let lhs = codegen_cond cond_1_n.node in
-      let rhs = codegen_cond cond_2_n.node in
+    (*
+    Implemented so that 'And' and 'Or' are short-circuiting operators.
+    code looks something like this:
+    
+    current_block:
+      ...
+      lhs = compute cond1
       match blo with
-      | Ast.And -> Llvm.build_and lhs rhs "and_tmp" builder
-      | Ast.Or -> Llvm.build_or lhs rhs "or_tmp" builder)
+      | And -> if lhs = true then goto second_cond else goto merge_cond
+      | Or -> if lhs = true then goto merge_cond else goto second_cond
+    second_cond:
+      rhs = compute cond2
+      goto merge_cond
+    merge_cond:
+      result = phi [lhs, current_block], [rhs, second_cond]
+      ...
+
+    In other words, if the operation is 'And' and lhs = false
+    then we know that result = false so we go to merge_cond and set result to false.
+    On the other hand, if the operation is 'Or' and lhs = true
+    then we know that result = true so we go to merge_cond and set result to true.
+    This way we can avoid computing rhs if we don't have to... :)
+    *)
+      let lhs = codegen_cond cond_1_n.node in
+      let the_block = Llvm.insertion_block builder in
+      let the_parent = Llvm.block_parent the_block in
+      let the_cond = Llvm.append_block context "second_cond" the_parent in
+      let the_end = Llvm.append_block context "merge_cond" the_parent in (
+      match blo with
+      | Ast.And -> Llvm.build_cond_br lhs the_cond the_end builder |> ignore
+      | Ast.Or -> Llvm.build_cond_br lhs the_end the_cond builder |> ignore
+      );
+      Llvm.position_at_end the_cond builder;
+      let rhs = codegen_cond cond_2_n.node in
+      Llvm.build_br the_end builder |> ignore;
+      Llvm.position_at_end the_end builder;
+      Llvm.build_phi [(lhs, the_block); (rhs, the_cond)] "bin_cond_tmp" builder
+    )
   | Ast.CompOp (expr_1_n, cop, expr_2_n) -> (
       let lhs = codegen_expr expr_1_n.node in
       let rhs = codegen_expr expr_2_n.node in
@@ -119,44 +211,71 @@ and codegen_stmt = function
   | Ast.Assign (l_val_n, expr_n) -> ()
   | Ast.Block block_n -> codegen_block block_n.node
   | Ast.SFuncCall func_c_n -> ()
-  | Ast.If (cond_n, stmt_1_n_o, stmt_2_n_o) ->
-      let cond_val = codegen_cond cond_n.node in
-      let icmp_ne =
-        Llvm.build_icmp Llvm.Icmp.Ne cond_val (c32 0) "if_cond" builder
-      in
-      let the_parent = Llvm.block_parent (Llvm.insertion_block builder) in
-      let the_then = Llvm.append_block context "then" the_parent in
-      let the_else = Llvm.append_block context "else" the_parent in
-      let the_endif = Llvm.append_block context "endif" the_parent in
-      Llvm.build_cond_br icmp_ne the_then the_else builder |> ignore;
-      Llvm.position_at_end the_then builder;
-      codegen_stmt (Option.get stmt_1_n_o).node;
-      Llvm.build_br the_endif builder |> ignore;
-      Llvm.position_at_end the_else builder;
-      if Option.is_some stmt_2_n_o then
-        codegen_stmt (Option.get stmt_2_n_o).node;
-      Llvm.build_br the_endif builder |> ignore;
-      Llvm.position_at_end the_endif builder
-  | Ast.While (cond_n, stmt_n) ->
-      let the_parent = Llvm.block_parent (Llvm.insertion_block builder) in
-      let the_while = Llvm.append_block context "while" the_parent in
-      let the_body = Llvm.append_block context "body" the_parent in
-      let the_endwhile = Llvm.append_block context "endwhile" the_parent in
-      Llvm.build_br the_while builder |> ignore;
-      Llvm.position_at_end the_while builder;
-      let cond_val = codegen_cond cond_n.node in
-      let icmp_ne =
-        Llvm.build_icmp Llvm.Icmp.Ne cond_val (c32 0) "while_cond" builder
-      in
-      Llvm.build_cond_br icmp_ne the_body the_endwhile builder |> ignore;
-      Llvm.position_at_end the_body builder;
-      codegen_stmt stmt_n.node;
-      Llvm.build_br the_while builder |> ignore;
-      Llvm.position_at_end the_endwhile builder
+  | Ast.If (cond_n, stmt_1_n_o, stmt_2_n_o) -> (
+    (*
+    current_block:
+      ...
+      cond_val = compute cond
+      if cond_val = true then goto then else goto else
+    then:
+      compute stmt1
+      goto endif
+    else:
+      compute stmt2
+      goto endif
+    endif:
+      ...
+    *)
+    let cond_val = codegen_cond cond_n.node in
+    let icmp_ne =
+      Llvm.build_icmp Llvm.Icmp.Ne cond_val (c32 0) "if_cond" builder
+    in
+    let the_parent = Llvm.block_parent (Llvm.insertion_block builder) in
+    let the_then = Llvm.append_block context "then" the_parent in
+    let the_else = Llvm.append_block context "else" the_parent in
+    let the_endif = Llvm.append_block context "endif" the_parent in
+    Llvm.build_cond_br icmp_ne the_then the_else builder |> ignore;
+    Llvm.position_at_end the_then builder;
+    codegen_stmt (Option.get stmt_1_n_o).node;
+    Llvm.build_br the_endif builder |> ignore;
+    Llvm.position_at_end the_else builder;
+    if Option.is_some stmt_2_n_o then
+      codegen_stmt (Option.get stmt_2_n_o).node;
+    Llvm.build_br the_endif builder |> ignore;
+    Llvm.position_at_end the_endif builder)
+  | Ast.While (cond_n, stmt_n) -> (
+    (*
+      current_block:
+        ...
+        br while
+      while:
+        cond_val = compute cond
+        if cond_val = true then goto body else goto endwhile
+      body:
+        compute stmt
+        goto while
+      endwhile:
+        ... 
+    *)
+    let the_parent = Llvm.block_parent (Llvm.insertion_block builder) in
+    let the_while = Llvm.append_block context "while" the_parent in
+    let the_body = Llvm.append_block context "body" the_parent in
+    let the_endwhile = Llvm.append_block context "endwhile" the_parent in
+    Llvm.build_br the_while builder |> ignore;
+    Llvm.position_at_end the_while builder;
+    let cond_val = codegen_cond cond_n.node in
+    let icmp_ne =
+      Llvm.build_icmp Llvm.Icmp.Ne cond_val (c32 0) "while_cond" builder
+    in
+    Llvm.build_cond_br icmp_ne the_body the_endwhile builder |> ignore;
+    Llvm.position_at_end the_body builder;
+    codegen_stmt stmt_n.node;
+    Llvm.build_br the_while builder |> ignore;
+    Llvm.position_at_end the_endwhile builder)
   | Ast.Return expr_n_o -> (
-      match expr_n_o with
-      | None -> Llvm.build_ret_void builder |> ignore
-      | Some expr_n ->
-          Llvm.build_ret (codegen_expr expr_n.node) builder |> ignore)
+    match expr_n_o with
+    | None -> Llvm.build_ret_void builder |> ignore
+    | Some expr_n ->
+      let ret_val = codegen_expr expr_n.node in
+      Llvm.build_ret ret_val builder |> ignore)
 
-(* I am become death *)

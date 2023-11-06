@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-char _readChar() {
+char readChar() {
     char c;
     scanf("%c", &c);
     return c;

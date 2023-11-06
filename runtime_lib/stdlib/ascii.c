@@ -1,3 +1,3 @@
-int _ascii(char c) {
+int ascii(char c) {
     return (int)(unsigned)c;
 }

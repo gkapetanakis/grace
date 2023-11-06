@@ -1,3 +1,3 @@
-char _chr(int num) {
+char chr(int num) {
     return (char)num;
 }

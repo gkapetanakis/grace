@@ -1,5 +1,5 @@
 #include <stdio.h>
 
-void _writeString(const char* s) {
+void writeString(const char* s) {
     printf("%s", s);
 }

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-void _readString(int n, char* s) {
+void readString(int n, char* s) {
     int i = 0;
     while (i < n - 1) {
         char c = getchar();

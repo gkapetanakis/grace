@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int _readInteger() {
+int readInteger() {
     int i;
     scanf("%d", &i);
     return i;

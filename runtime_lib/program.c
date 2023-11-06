@@ -1,4 +1,4 @@
-extern void __strcpy(char*, const char*);
+extern void strcpy(char*, const char*);
 extern void writeString(const char*);
 
 int main() {
@@ -7,11 +7,11 @@ int main() {
     'd','e','e','z','\0'
   };
 
-  __strcpy(dest, src);
-
+  strcpy(dest, src);
   writeString(dest);
   writeString("\n");
   writeString(src);
+  writeString("\n");
 
   return 0;
 }
