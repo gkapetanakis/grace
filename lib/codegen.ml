@@ -6,6 +6,7 @@ let i8_t = Llvm.i8_type context (* char *)
 let i32_t = Llvm.i32_type context (* int *)
 let i64_t = Llvm.i64_type context (* ase *)
 let void_t = Llvm.void_type context (* nothing *)
+let c1 = Llvm.const_int i1_t
 let c8 = Llvm.const_int i8_t
 let c32 = Llvm.const_int i32_t
 let c64 = Llvm.const_int i64_t
