@@ -61,7 +61,7 @@ let _ = Llvm.declare_function "strcat" strcat_t modulx
 let rec codegen_expr = function
   | Ast.LitInt i -> c32 i
   | Ast.LitChar c -> c8 (int_of_char c)
-  | Ast.LValue l_val -> codegen_l_value l_val
+  | Ast.LValue l_val_n -> codegen_l_value l_val_n.node
   | Ast.EFuncCall f_call ->
       c32 1
       (* takes a func_call ast node and turns it to llvm code *)
