@@ -13,3 +13,7 @@
  (modules parser tokens)
  (merge_into parser)
  (flags --external-tokens Tokens))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
