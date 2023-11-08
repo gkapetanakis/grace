@@ -1,5 +1,10 @@
 (tests
- (names lexer parser)
+ (names lexer parser codegen)
  (deps
   (source_tree ./programs))
- (libraries grace_lib))
+ (libraries grace_lib llvm.executionengine llvm.analysis))
+
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
