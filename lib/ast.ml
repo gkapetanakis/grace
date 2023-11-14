@@ -1,6 +1,7 @@
 type loc = Lexing.position * Lexing.position
 
 type data_type = Int | Char | Nothing | Array of data_type * int option list
+type data_type_rec = RInt | RChar | RNothing | RArray of data_type_rec * int option
 type un_arit_op = Pos | Neg
 type bin_arit_op = Add | Sub | Mul | Div | Mod
 type un_logic_op = Not
@@ -31,7 +32,7 @@ type param_def = {
 
 type l_value_id = {
   id : string;
-  data_type : data_type;
+  type_t : data_type;
   pass_by : pass_by;
   frame_offset : int;
   parent_path : string list;
@@ -40,7 +41,7 @@ type l_value_id = {
 
 type l_value_lstring = {
   id : string;
-  data_type : data_type;
+  type_t : data_type;
   loc : loc;
 }
 
@@ -52,7 +53,7 @@ type l_value =
 and func_call = {
   id : string;
   args : expr * pass_by list;
-  data_type : ret_type;
+  type_t : ret_type;
   loc : loc;
   callee_path : string list;
   caller_path : string list;
@@ -85,7 +86,7 @@ and stmt =
 type func = {
   id : string;
   params : param_def list;
-  ret_type : ret_type;
+  type_t : ret_type;
   var_defs : var_def list;
   func_decls : func list;
   func_defs : func list;
@@ -128,3 +129,23 @@ let reorganize_local_defs (local_defs : local_def list) =
   in
   let (vars, funcs, decls) = reorganize_local_defs' local_defs [] [] [] in
   (List.rev vars, List.rev decls,  List.rev funcs)
+
+let rec data_type_to_rec = function
+  | Int -> RInt
+  | Char -> RChar
+  | Nothing -> RNothing
+  | Array (dt, dims) ->
+    let rec aux dt dims =
+      match dims with
+      | [] -> data_type_to_rec dt
+      | dim :: dims -> RArray (aux dt dims, dim)
+    in aux dt dims
+
+let rec rec_data_type_to_normal = function
+  | RInt -> Int
+  | RChar -> Char
+  | RNothing -> Nothing
+  | RArray (dt, dim) ->
+    match rec_data_type_to_normal dt with
+    | Array (dt, dims) -> Array (dt, dim :: dims)
+    | dt -> Array (dt, [dim])
