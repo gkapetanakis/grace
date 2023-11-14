@@ -11,7 +11,7 @@ type var_type = data_type
 type param_type = data_type
 type ret_type = data_type
 type pass_by = Value | Reference
-type func_status = | Defined | Declared
+type func_status = Defined | Declared
 
 type var_def = {
   id : string;
@@ -52,7 +52,7 @@ type l_value =
 
 and func_call = {
   id : string;
-  args : expr * pass_by list;
+  args : (expr * pass_by) list;
   type_t : ret_type;
   loc : loc;
   callee_path : string list;
@@ -87,9 +87,7 @@ type func = {
   id : string;
   params : param_def list;
   type_t : ret_type;
-  var_defs : var_def list;
-  func_decls : func list;
-  func_defs : func list;
+  local_defs : local_def list;
   body : block option;
   loc : loc;
   parent_path : string list;
