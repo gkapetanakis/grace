@@ -1,7 +1,7 @@
 open Error
 open Ast
 
-let start = 1
+let start = 1 (* we might choose that offsets start at 0, but I think starting at 1 will prove to be a good idea, we'll find out later *)
 
 type entry_type =
   | Variable of var_def ref
@@ -20,6 +20,7 @@ and scope = {
 }
 
 type symbol_table = {
+  mutable parent_path : string list;
   mutable scopes : scope list;
   table : (string, entry) Hashtbl.t;
 }
@@ -51,11 +52,15 @@ match sym_tbl.scopes with
 | [] -> None
 | _ -> Hashtbl.find_opt sym_tbl.table id
 
-let open_scope (sym_tbl : symbol_table) = sym_tbl.scopes <- {next_offset = start; entries = []} :: sym_tbl.scopes
+let open_scope (func_id : string) (sym_tbl : symbol_table) =
+  let scope = {next_offset = start; entries = []} in
+  sym_tbl.scopes <- scope :: sym_tbl.scopes;
+  sym_tbl.parent_path <- func_id :: sym_tbl.parent_path
 
 let close_scope loc (sym_tbl : symbol_table) =
   match sym_tbl.scopes with
   | [] -> raise (Symbol_table_error (loc, "Tried to close empty symbol table"))
   | hd :: tl ->
     List.iter (fun entry -> Hashtbl.remove sym_tbl.table entry.id) hd.entries;
-    sym_tbl.scopes <- tl
+    sym_tbl.scopes <- tl;
+    sym_tbl.parent_path <- List.tl sym_tbl.parent_path
