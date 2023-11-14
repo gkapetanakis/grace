@@ -41,13 +41,13 @@ let comp_var_param_def (vd : var_def) (pd : param_def) =
     if t1 <> t2 then raise (Semantic_error (vd.loc, "Array element type mismatch"));
     if List.length dims1 <> List.length dims2 then raise (Semantic_error (vd.loc, "Array dimension count mismatch"));
     if List.hd dims2 = None then
-    let tl_dims1, tl_dims2 = List.tl dims1, List.tl dims2 in
-    List.iter2 (
-      fun dim1 dim2 -> match dim1, dim2 with
-      | None, None -> ()
-      | Some n1, Some n2 -> if n1 <> n2 then raise (Semantic_error (vd.loc, "Array dimension size mismatch"))
-      | _ -> ()
-    ) tl_dims1 tl_dims2
+      let tl_dims1, tl_dims2 = List.tl dims1, List.tl dims2 in
+      List.iter2 (
+        fun dim1 dim2 -> match dim1, dim2 with
+        | None, None -> ()
+        | Some n1, Some n2 -> if n1 <> n2 then raise (Semantic_error (vd.loc, "Array dimension size mismatch"))
+        | _ -> ()
+      ) tl_dims1 tl_dims2
   | t1, t2 -> if t1 <> t2 then raise (Semantic_error (vd.loc, "Type mismatch"))
 
 let sem_var_def (vd : var_def) (sym_tbl : symbol_table) =
@@ -61,11 +61,9 @@ let ins_var_def (vd : var_def) (sym_tbl : symbol_table) =
 
 let sem_param_def (pd : param_def) (sym_tbl : symbol_table) =
   verify_param_def pd;
-  let check_type () =
-    match pd.type_t, pd.pass_by with
-    | Array _, Value -> raise (Semantic_error (pd.loc, "Array parameter must be passed by reference"))
-    | _ -> ()
-  in check_type ();
+  match pd.type_t, pd.pass_by with
+  | Array _, Value -> raise (Semantic_error (pd.loc, "Array parameter must be passed by reference"))
+  | _ -> ();
   match lookup pd.id sym_tbl with
   | Some _ -> raise (Semantic_error (pd.loc, "Parameter already defined in current scope"))
   | None -> ()
