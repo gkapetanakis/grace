@@ -1,12 +1,6 @@
 type loc = Lexing.position * Lexing.position
 
-(* parser rules will return <something> node types *)
-type 'a node = { loc : loc; node : 'a }
-
-let get_loc n = n.loc
-let get_node n = n.node
-
-type data_type = Int | Char | Nothing | Array of data_type * int option
+type data_type = Int | Char | Nothing | Array of data_type * int option list
 type un_arit_op = Pos | Neg
 type bin_arit_op = Add | Sub | Mul | Div | Mod
 type un_logic_op = Not
@@ -16,64 +10,121 @@ type var_type = data_type
 type param_type = data_type
 type ret_type = data_type
 type pass_by = Value | Reference
-type var_def = string * data_type
-type param_def = string * data_type * pass_by
+type func_status = | Defined | Declared
+
+type var_def = {
+  id : string;
+  type_t : var_type;
+  frame_offset : int;
+  parent_path : string list;
+  loc : loc;
+}
+
+type param_def = {
+  id : string;
+  type_t : param_type;
+  pass_by : pass_by;
+  frame_offset : int;
+  parent_path : string list;
+  loc : loc;
+}
+
+type l_value_id = {
+  id : string;
+  data_type : data_type;
+  pass_by : pass_by;
+  frame_offset : int;
+  parent_path : string list;
+  loc : loc;
+}
+
+type l_value_lstring = {
+  id : string;
+  data_type : data_type;
+  loc : loc;
+}
 
 type l_value =
-  | Id of string
-  | LString of string
-  | ArrayAccess of l_value node * expr node
+  | Id of l_value_id
+  | LString of l_value_lstring
+  | ArrayAccess of l_value * expr list
 
-and func_call = string * expr node list
+and func_call = {
+  id : string;
+  args : expr * pass_by list;
+  data_type : ret_type;
+  loc : loc;
+  callee_path : string list;
+  caller_path : string list;
+}
 
 and expr =
-  | LitInt of int
-  | LitChar of char
-  | LValue of l_value node
-  | EFuncCall of func_call node
-  | UnAritOp of un_arit_op * expr node
-  | BinAritOp of expr node * bin_arit_op * expr node
+  | LitInt of { lit_int : int; loc : loc }
+  | LitChar of { lit_char : char; loc : loc }
+  | LValue of { l_value : l_value; loc : loc }
+  | EFuncCall of func_call
+  | UnAritOp of un_arit_op * expr
+  | BinAritOp of expr * bin_arit_op * expr
 
 type cond =
-  | UnLogicOp of un_logic_op * cond node
-  | BinLogicOp of cond node * bin_logic_op * cond node
-  | CompOp of expr node * comp_op * expr node
+| UnLogicOp of un_logic_op * cond
+| BinLogicOp of cond * bin_logic_op * cond
+| CompOp of expr * comp_op * expr
 
-type block = stmt node list
+type block = stmt list
 
 and stmt =
   | Empty
-  | Assign of l_value node * expr node
-  | Block of block node
-  | SFuncCall of func_call node
-  | If of cond node * stmt node option * stmt node option
-  | While of cond node * stmt node
-  | Return of expr node option
+  | Assign of l_value * expr
+  | Block of block
+  | SFuncCall of func_call
+  | If of cond * stmt option * stmt option
+  | While of cond * stmt
+  | Return of expr option
 
-type header = string * param_def node list * data_type
-type func_decl = header node
-
-type func_def = header node * local_def node list * block node
+type func = {
+  id : string;
+  params : param_def list;
+  ret_type : ret_type;
+  var_defs : var_def list;
+  func_decls : func list;
+  func_defs : func list;
+  body : block option;
+  loc : loc;
+  parent_path : string list;
+  status : func_status
+}
 
 and local_def =
-  | FuncDef of func_def node
-  | FuncDecl of func_decl node
-  | VarDef of var_def node
+  | VarDef of var_def
+  | FuncDecl of func
+  | FuncDef of func
 
-type program = MainFunc of func_def node
+type program = MainFunc of func
 
-(* creates an Ast.var_type instance from an Ast.data_type and an int list *)
-let rec create_var_type dt dims =
-  match dims with [] -> dt | hd :: tl -> Array (create_var_type dt tl, Some hd)
+let create_var_type dt dims =
+  match dims with
+  | [] -> dt
+  | _ -> Array (dt, List.map (fun x -> Some x) dims)
 
-(* creates an Ast.param_type instance from an Ast.data_type, an int list and a bool flag *)
 let create_param_type dt dims flexible =
   match (dims, flexible) with
   | [], false -> dt
-  | hd :: tl, false -> Array (create_var_type dt tl, Some hd)
-  | dims, true -> Array (create_var_type dt dims, None)
+  | (_ :: _) as dims, false -> Array (dt, List.map (fun x -> Some x) dims)
+  | dims, true -> Array (dt, None :: List.map (fun x -> Some x) dims)
 
-let rec l_value_dep_on_l_string = function
+let rec l_string_dependence = function
   | Id _ -> false
   | LString _ -> true
-  | ArrayAccess (lv, _) -> l_value_dep_on_l_string (get_node lv)
+  | ArrayAccess (lv, _) -> l_string_dependence lv
+
+let reorganize_local_defs (local_defs : local_def list) =
+  let rec reorganize_local_defs' (local_defs : local_def list) (vars : var_def list) (decls : func list) (funcs : func list) =
+    match local_defs with
+    | [] -> (vars, funcs, decls)
+    | VarDef v :: local_defs -> reorganize_local_defs' local_defs (v :: vars) decls funcs
+    | FuncDecl f :: local_defs -> reorganize_local_defs' local_defs vars (f :: decls) funcs
+    | FuncDef f :: local_defs -> reorganize_local_defs' local_defs vars decls (f :: funcs)
+  in
+  let (vars, funcs, decls) = reorganize_local_defs' local_defs [] [] [] in
+  (List.rev vars, List.rev decls,  List.rev funcs)
