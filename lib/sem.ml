@@ -9,28 +9,28 @@ let verify_var_def (vd : var_def) =
       fun dim -> match dim with
       | None -> false
       | Some n -> n <= 0
-    ) dims <> None then raise (Semantic_error (vd.loc, "Array dimension must be positive"));
-    if List.find_opt (
+    ) dims <> None then raise (Semantic_error (vd.loc, "Array dimension must be positive"))
+    else if List.find_opt (
       fun dim -> match dim with
       | None -> true
       | _ -> false
-    ) dims <> None then raise (Semantic_error (vd.loc, "Array dimension must be specified")); ()
+    ) dims <> None then raise (Semantic_error (vd.loc, "Array dimension must be specified")) else ()
   | _ -> ()
 
-let verify_param_def (pd : param_def) = 
+let verify_param_def (pd : param_def) =
   match pd.type_t with
   | Array (_, dims) ->
+    let tl_dims = List.tl dims in
     if List.find_opt (
       fun dim -> match dim with
       | None -> false
       | Some n -> n <= 0
-    ) dims <> None then raise (Semantic_error (pd.loc, "Array dimension must be positive"));
-    let tl_dims = List.tl dims in
-    if List.find_opt (
+    ) dims <> None then raise (Semantic_error (pd.loc, "Array dimension must be positive"))
+    else if List.find_opt (
       fun dim -> match dim with
       | None -> true
       | _ -> false
-    ) tl_dims <> None then raise (Semantic_error (pd.loc, "Array dimension must be specified")); ()
+    ) tl_dims <> None then raise (Semantic_error (pd.loc, "Array dimension must be specified")) else ()
   | _ -> ()
 
 let comp_var_param_def (vd : var_def) (pd : param_def) =
