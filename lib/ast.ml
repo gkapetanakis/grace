@@ -32,10 +32,10 @@ type param_def = {
 
 type l_value_id = {
   id : string;
-  type_t : data_type;
-  pass_by : pass_by;
-  frame_offset : int;
-  parent_path : string list;
+  mutable type_t : data_type;
+  mutable pass_by : pass_by;
+  mutable frame_offset : int;
+  mutable parent_path : string list;
   loc : loc;
 }
 

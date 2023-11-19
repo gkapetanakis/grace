@@ -25,6 +25,12 @@ type symbol_table = {
   table : (string, entry) Hashtbl.t;
 }
 
+let get_and_increment_offset (sym_tbl : symbol_table) =
+  let scope = List.hd sym_tbl.scopes in
+  let offset = scope.next_offset in
+  scope.next_offset <- scope.next_offset + 1;
+  offset
+
 let type_of_entry {type_t;_} =
   match type_t with
   | Variable v -> !v.type_t

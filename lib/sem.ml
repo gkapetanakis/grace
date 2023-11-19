@@ -48,6 +48,10 @@ let comp_var_param_def (vd : var_def) (pd : param_def) =
       ) tl_dims1 tl_dims2
   | t1, t2 -> if t1 <> t2 then raise (Semantic_error (vd.loc, "Type mismatch"))
 
+(* maybe check ref *)
+
+(* maybe compare heads *)
+
 let sem_var_def (vd : var_def) (sym_tbl : symbol_table) =
   verify_var_def vd;
   match lookup vd.id sym_tbl with
@@ -69,4 +73,51 @@ let sem_param_def (pd : param_def) (sym_tbl : symbol_table) =
 let ins_param_def (pd : param_def) (sym_tbl : symbol_table) =
   insert pd.loc pd.id (Parameter (ref pd)) sym_tbl
 
-let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) = ()
+let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
+  match lv with
+  | Id l_val_id -> (
+    match lookup_all l_val_id.id sym_tbl with
+    | None -> raise (Semantic_error (l_val_id.loc, "Variable not defined in any scope"))
+    | Some {type_t; _} -> (
+      match type_t with
+      | Variable vdr -> let vd = !vdr in 
+        l_val_id.type_t <- vd.type_t;
+        l_val_id.pass_by <- Value;
+        l_val_id.frame_offset <- vd.frame_offset;
+        l_val_id.parent_path <- vd.parent_path;
+      | Parameter pdr -> let pd = !pdr in
+        l_val_id.type_t <- pd.type_t;
+        l_val_id.pass_by <- pd.pass_by;
+        l_val_id.frame_offset <- pd.frame_offset;
+        l_val_id.parent_path <- pd.parent_path;
+      | Function _ -> raise (Semantic_error (l_val_id.loc, "Function cannot be used as l-value"))
+    )
+  )
+  | LString _ -> ()
+  | ArrayAccess (l_val, expr_l) -> (
+    sem_l_value l_val sym_tbl;
+    let loc = ref (Lexing.dummy_pos, Lexing.dummy_pos) in
+    let dims = (
+        match l_val with
+        | Id l_val_id -> (
+          loc := l_val_id.loc;
+          match l_val_id.type_t with
+          | Array (_, dims) -> dims
+          | _ -> raise (Semantic_error (!loc, "Not an array bro"))
+          )
+          | LString l_val_str -> (
+            loc := l_val_str.loc;
+            match l_val_str.type_t with
+            | Array (_, dims) -> dims
+          | _ -> raise (Semantic_error (!loc, "Not an array bro"))
+        )
+        | ArrayAccess _ -> raise (Semantic_error (!loc, "Implementation error, have a nice day"))
+    ) in
+    let expr_types = List.map (fun expr -> sem_expr expr sym_tbl) expr_l in
+    if List.length dims <> List.length expr_types then
+      raise (Semantic_error (!loc, "Array access dimension count mismatch"))
+    else if List.length (List.filter (fun t -> t <> Int) expr_types) <> 0 then
+      raise (Semantic_error (!loc, "Array access dimension must be integer"))
+  )
+
+and sem_expr expr sym_tbl = Int
