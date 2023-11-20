@@ -3,6 +3,11 @@ open Ast
 type mode = AstOnly | All
 
 let mode = ref All
+let tbl : Symbol.symbol_table = {
+  parent_path = [];
+  scopes = [];
+  table = Hashtbl.create 100;
+}
 
 let enjoy sem node =
   match !mode with
@@ -33,13 +38,13 @@ let wrap_var_def loc id vt sym_tbl =
   in
   enjoy sem var_def
 
-let wrap_param_def loc id pt pb sym_tbl =
+let wrap_param_def loc id pt pb (sym_tbl : Symbol.symbol_table) =
   let param_def : param_def =
     {
       id;
       type_t = pt;
       pass_by = pb;
-      frame_offset = 0;
+      frame_offset = 0; (* will be set by wrap_def_header *)
       parent_path = sym_tbl.parent_path;
       loc;
     }
@@ -140,7 +145,7 @@ let wrap_cond_bin_logic_op _loc op lhs rhs sym_tbl =
   let sem () = Sem.sem_cond cond sym_tbl in
   enjoy sem cond
 
-let wrap_comp_op _loc op lhs rhs sym_tbl =
+let wrap_cond_comp_op _loc op lhs rhs sym_tbl =
   let cond : cond = CompOp (lhs, op, rhs) in
   let sem () = Sem.sem_cond cond sym_tbl in
   enjoy sem cond

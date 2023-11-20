@@ -1,5 +1,5 @@
 %{
-  open Gift
+  open Wrapper
 %}
 
 %start <Ast.program> program
@@ -110,11 +110,11 @@ let expr :=
   | LEFT_PAR; ~ = expr; RIGHT_PAR;
     { expr }
   | fc = func_call;
-    { wrap_expr_func_call $loc (Ast.EFuncCall fc) tbl }
+    { wrap_expr_func_call $loc fc tbl }
   | op = un_arit_op; e = expr; %prec USIGN
     { wrap_expr_un_arit_op $loc op e tbl }  (* Semantic: e should be int *)
   | e1 = expr;  op = bin_arit_op; e2 = expr;
-    { wrap_expr $loc op e1 e2 tbl } (* Semantic: e1, e2 should be both int *)
+    { wrap_expr_bin_arit_op $loc op e1 e2 tbl } (* Semantic: e1, e2 should be both int *)
 
 let cond :=
   | LEFT_PAR; c = cond; RIGHT_PAR;
@@ -128,7 +128,7 @@ let cond :=
 
 let block :=
   | LEFT_CURL; stmts = list(stmt); RIGHT_CURL;
-    { wrap_block $loc stmts tbl }
+    { wrap_block $loc stmts }
 
 let stmt :=
   | SEMICOLON;
@@ -158,11 +158,11 @@ let def_header :=
 
 let func_decl :=
   | h = decl_header; SEMICOLON;
-    { wrap_func_decl $loc(h) h }
+    { wrap_func_decl h }
 
 let func_def :=
   | h = def_header; ld_l = flatten(list(local_def)); b = block;
-    { wrap_close_scope $loc tbl ;wrap_func_def $loc(h) h ld_l b }
+    { wrap_close_scope $loc tbl ;wrap_func_def h ld_l b }
 
 let local_def :=
   | fd = func_def;
@@ -173,5 +173,5 @@ let local_def :=
     { wrap_local_def_var vd_l }
 
 let program :=
-  | midrule({ wrap_open_scope tbl }); fd = func_def; EOF;
+  | midrule({ wrap_open_scope "" tbl }); fd = func_def; EOF;
     { wrap_close_scope $loc tbl; wrap_program fd }
