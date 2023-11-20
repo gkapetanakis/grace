@@ -1,5 +1,5 @@
 (tests
- (names test)
+ (names lexer parser)
  (deps
   (source_tree ./programs))
  (libraries grace_lib llvm.executionengine llvm.analysis))

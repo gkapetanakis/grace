@@ -185,7 +185,7 @@ let pr_func_decl off enable (func : func) =
 let rec pr_func_def off enable (func : func) =
   let str =
     off ^ "FuncDef(" ^ endl ^ pr_header (off ^ sep) false func ^ ")" ^ endl ^
-    off ^ sep ^ "parent[" ^ String.concat "_" func.parent_path ^ "] status: " ^ (if func.status = Declared then "declared" else "defined") ^
+    off ^ sep ^ "parent[" ^ String.concat "_" func.parent_path ^ "] status: " ^ (if func.status = Declared then "declared" else "defined") ^ endl ^
     String.concat ""
       (List.map (fun s -> pr_local_def (off ^ sep) true s) func.local_defs) ^
     pr_block (off ^ sep) false (Option.get func.body)
