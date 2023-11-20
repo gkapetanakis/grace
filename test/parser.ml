@@ -23,6 +23,7 @@ let () =
     let lexbuf = Lexing.from_channel chan in
     Lexing.set_filename lexbuf filename;
     try
+      print_endline filename;
       let ast_node = Parser.program Grace_lib.Lexer.token lexbuf in
       ast_node |> Print_ast.pr_program |> print_string;
 

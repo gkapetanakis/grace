@@ -1,12 +1,25 @@
 open Grace_lib
+open Arg
+
+let filenames = ref []
+
+let usage_msg =
+  "Usage: parser --file <filename> --files <filename1> <filename2> ..."
+
+let speclist =
+  [
+    ( "--file",
+      String (fun str -> filenames := str :: !filenames),
+      "Input file name" );
+    ( "--files",
+      Rest (fun str -> filenames := str :: !filenames),
+      "Input file names" );
+  ]
 
 let () =
-  let dirname = "programs/" in
-  let filenames =
-    [ "program1.grc"; "program2.grc"; "program3.grc"; "program4.grc" ]
-  in
+  Arg.parse speclist (fun _ -> ()) usage_msg;
   let test filename =
-    let chan = open_in (dirname ^ filename) in
+    let chan = open_in filename in
     let lexbuf = Lexing.from_channel chan in
     Lexing.set_filename lexbuf filename;
     let rec tokenize_and_print () =
@@ -22,10 +35,8 @@ let () =
       with Error.Lexing_error (loc, msg) -> Error.pr_lexing_error (loc, msg)
     in
     print_endline filename;
-    tokenize_and_print ()
+    tokenize_and_print ();
+
+    print_string "\n====================\n\n"
   in
-  List.iteri
-    (fun i f ->
-      test f;
-      if i < List.length filenames - 1 then print_newline ())
-    filenames
+  List.iter test !filenames

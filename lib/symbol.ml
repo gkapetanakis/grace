@@ -56,7 +56,9 @@ let lookup_all (id : string) (sym_tbl : symbol_table) =
 let open_scope (func_id : string) (sym_tbl : symbol_table) =
   let scope = { next_offset = start; entries = [] } in
   sym_tbl.scopes <- scope :: sym_tbl.scopes;
-  sym_tbl.parent_path <- func_id :: sym_tbl.parent_path
+  sym_tbl.parent_path <-
+    (if func_id = String.empty then sym_tbl.parent_path
+     else func_id :: sym_tbl.parent_path)
 
 let close_scope loc (sym_tbl : symbol_table) =
   match sym_tbl.scopes with
@@ -64,4 +66,4 @@ let close_scope loc (sym_tbl : symbol_table) =
   | hd :: tl ->
       List.iter (fun entry -> Hashtbl.remove sym_tbl.table entry.id) hd.entries;
       sym_tbl.scopes <- tl;
-      sym_tbl.parent_path <- List.tl sym_tbl.parent_path
+      match sym_tbl.parent_path with _ :: t -> sym_tbl.parent_path <- t | _ -> ()
