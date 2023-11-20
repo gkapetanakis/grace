@@ -62,6 +62,15 @@ let comp_var_param_types loc (vt : var_type) (pt : param_type) =
 let comp_var_param_def (vd : var_def) (pd : param_def) =
   comp_var_param_types vd.loc vd.type_t pd.type_t
 
+let comp_param_decl_def loc (pd1 : param_def) (pd2 : param_def) =
+  if pd1.pass_by <> pd2.pass_by then
+    raise
+      (Semantic_error
+         (loc, "Parameter definition/declaration 'pass by' mismatch"))
+  else if pd1.type_t <> pd2.type_t then
+    raise
+      (Semantic_error (loc, "Parameter definition/declaration type mismatch"))
+
 let type_of_ret loc sym_tbl =
   let sc = List.hd (List.tl sym_tbl.scopes) in
   let entry = List.hd sc.entries in
@@ -69,9 +78,23 @@ let type_of_ret loc sym_tbl =
   | Function f -> !f.type_t
   | _ -> raise (Semantic_error (loc, "Return statement outside function"))
 
-(* maybe check ref *)
+let check_ref loc expr pass_by =
+  match (expr, pass_by) with
+  | LValue _, _ -> ()
+  | _, Value -> ()
+  | _, Reference ->
+      raise (Semantic_error (loc, "Passing non-l-value by reference"))
 
-(* maybe compare heads *)
+let compare_heads (decl : func) (def : func) =
+  if decl.type_t <> def.type_t then
+    raise
+      (Semantic_error
+         (def.loc, "Function definition/declaration return type mismatch"))
+  else if List.length decl.params <> List.length def.params then
+    raise
+      (Semantic_error
+         (def.loc, "Function definition/declaration parameter count mismatch"))
+  else List.iter2 (comp_param_decl_def def.loc) decl.params def.params
 
 let sem_var_def (vd : var_def) (sym_tbl : symbol_table) =
   verify_var_def vd;
@@ -158,16 +181,17 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
           if List.length param_types <> List.length exprs then
             raise (Semantic_error (func_call.loc, "Parameter count mismatch"))
           else
-            let loc_expr_types =
-              List.map (fun expr -> sem_expr expr sym_tbl) exprs
+            let _, expr_types =
+              List.split (List.map (fun expr -> sem_expr expr sym_tbl) exprs)
             in
-            let _, expr_types = List.split loc_expr_types in
             List.iter2
               (comp_var_param_types func_call.loc)
               expr_types param_types;
             func_call.args <-
               List.map2
-                (fun (expr : expr) (param : param_def) -> (expr, param.pass_by))
+                (fun (expr : expr) (param : param_def) ->
+                  check_ref func_call.loc expr param.pass_by;
+                  (expr, param.pass_by))
                 exprs fd.params;
             func_call.callee_path <- fd.parent_path;
             (func_call.loc, func_call.type_t)
@@ -233,7 +257,8 @@ let sem_stmt stmt sym_tbl =
 
 let sem_header (func : Ast.func) =
   match func.type_t with
-  | Ast.Array _ -> raise (Semantic_error (func.loc, "Return type cannot be array"))
+  | Ast.Array _ ->
+      raise (Semantic_error (func.loc, "Return type cannot be array"))
   | _ -> ()
 
 let sem_func_decl (func : Ast.func) (sym_tbl : symbol_table) =
@@ -249,36 +274,45 @@ let ins_func_decl (func : Ast.func) (sym_tbl : symbol_table) =
 let sem_func_def (func : Ast.func) (sym_tbl : symbol_table) =
   match lookup func.id sym_tbl with
   | None -> ()
-  | Some {type_t;_} ->
-    match type_t with
-    | Function fdr ->
-        let fd = !fdr in
-        if fd.status = Ast.Defined then
-          raise
-            (Semantic_error
-               (func.loc, "Function already defined in current scope"))
-    | _ -> raise (Semantic_error (func.loc, "Name is not a function"))
+  | Some { type_t; _ } -> (
+      match type_t with
+      | Function fdr ->
+          let fd = !fdr in
+          if fd.status = Ast.Defined then
+            raise
+              (Semantic_error
+                 (func.loc, "Function already defined in current scope"))
+          else compare_heads fd func
+      | _ -> raise (Semantic_error (func.loc, "Name is not a function")))
 
 let ins_func_def (func : Ast.func) (sym_tbl : symbol_table) =
   insert func.loc func.id (Function (ref func)) sym_tbl
 
 let sem_program (program : Ast.program) (sym_tbl : symbol_table) =
-  let main = (match program with MainFunc f -> f) in
+  let main = match program with MainFunc f -> f in
   if List.length main.params <> 0 then
     raise (Semantic_error (main.loc, "Main function cannot have parameters"))
   else if main.type_t <> Nothing then
     raise (Semantic_error (main.loc, "Main function cannot have return type"))
   else
-  let tbl = sym_tbl.table in
-  Hashtbl.iter (
-    fun _ value -> match value.type_t with
-      | Function fdr ->
-        let fd = !fdr in
-        if fd.status = Ast.Declared then
-          raise
-            (Semantic_error
-               (fd.loc, "Function " ^ fd.id ^ " not defined"))
-        else raise (Semantic_error (fd.loc, "Lingering function definition " ^ fd.id))
-      | Variable v -> raise (Semantic_error (!v.loc, "Lingering variable definition " ^ !v.id))
-      | Parameter p -> raise (Semantic_error (!p.loc, "Lingering parameter definition " ^ !p.id))
-  ) tbl; program
+    let tbl = sym_tbl.table in
+    Hashtbl.iter
+      (fun _ value ->
+        match value.type_t with
+        | Function fdr ->
+            let fd = !fdr in
+            if fd.status = Ast.Declared then
+              raise
+                (Semantic_error (fd.loc, "Function " ^ fd.id ^ " not defined"))
+            else
+              raise
+                (Semantic_error
+                   (fd.loc, "Lingering function definition " ^ fd.id))
+        | Variable v ->
+            raise
+              (Semantic_error (!v.loc, "Lingering variable definition " ^ !v.id))
+        | Parameter p ->
+            raise
+              (Semantic_error (!p.loc, "Lingering parameter definition " ^ !p.id)))
+      tbl;
+    program

@@ -31,7 +31,7 @@ type param_def = {
   type_t : param_type;
   pass_by : pass_by;
   mutable frame_offset : int;
-  parent_path : string list;
+  mutable parent_path : string list;
   loc : loc;
 }
 

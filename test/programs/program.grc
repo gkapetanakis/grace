@@ -1,9 +1,0 @@
-fun main(): int
-    var a: int;
-    fun b(x: int): int
-    {
-        return 3;
-    }
-{
-    return 1;
-}

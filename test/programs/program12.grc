@@ -10,7 +10,7 @@ fun main(): nothing
   fun aux(a: int): nothing
     fun aux_inner(ref b: int): nothing
     {
-        b <- b + a; $ use parameter a
+      b <- b + a; $ use parameter a
     }
   {
     aux_inner(f); $ use variable f

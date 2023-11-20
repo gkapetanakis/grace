@@ -3,11 +3,9 @@ open Ast
 type mode = AstOnly | All
 
 let mode = ref All
-let tbl : Symbol.symbol_table = {
-  parent_path = [];
-  scopes = [];
-  table = Hashtbl.create 100;
-}
+
+let tbl : Symbol.symbol_table =
+  { parent_path = []; scopes = []; table = Hashtbl.create 100 }
 
 let enjoy sem node =
   match !mode with
@@ -38,19 +36,20 @@ let wrap_var_def loc id vt sym_tbl =
   in
   enjoy sem var_def
 
-let wrap_param_def loc id pt pb (sym_tbl : Symbol.symbol_table) =
+let wrap_param_def loc id pt pb (_sym_tbl : Symbol.symbol_table) =
   let param_def : param_def =
     {
       id;
       type_t = pt;
       pass_by = pb;
-      frame_offset = 0; (* will be set by wrap_def_header *)
-      parent_path = sym_tbl.parent_path;
+      frame_offset = 0;
+      (* will be set by wrap_decl/def_header *)
+      parent_path = [];
+      (* will be set by wrap_decl/def_header *)
       loc;
     }
   in
-  let sem () = ()
-  in
+  let sem () = () in
   enjoy sem param_def
 
 let wrap_l_value_id loc id exprs sym_tbl =
@@ -192,65 +191,78 @@ let wrap_stmt_return loc e_o sym_tbl =
   enjoy sem stmt
 
 let wrap_decl_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
-  let decl = Ast.{
-    id;
-    params = pd_l;
-    type_t = ret_type;
-    local_defs = [];
-    body = None;
-    loc;
-    parent_path = sym_tbl.parent_path;
-    status = Ast.Declared;
-  } in
+  let decl =
+    {
+      id;
+      params = pd_l;
+      type_t = ret_type;
+      local_defs = [];
+      body = None;
+      loc;
+      parent_path = sym_tbl.parent_path;
+      status = Declared;
+    }
+  in
   let sem () =
     Sem.sem_header decl;
     Sem.sem_func_decl decl sym_tbl;
     Sem.ins_func_decl decl sym_tbl;
     wrap_open_scope id sym_tbl;
-    List.iter (
-      fun (pd : Ast.param_def) ->
+    List.iter
+      (fun (pd : param_def) ->
         pd.frame_offset <- Symbol.get_and_increment_offset sym_tbl;
+        pd.parent_path <- sym_tbl.parent_path;
         Sem.sem_param_def pd sym_tbl;
-        Sem.ins_param_def pd sym_tbl
-    ) pd_l;
+        Sem.ins_param_def pd sym_tbl)
+      pd_l;
     wrap_close_scope loc sym_tbl
   in
   enjoy sem decl
 
 let wrap_def_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
-  let def = Ast.{
-    id;
-    params = pd_l;
-    type_t = ret_type;
-    local_defs = []; (* will be added later *)
-    body = None; (* will be added later *)
-    loc;
-    parent_path = sym_tbl.parent_path;
-    status = Ast.Defined;
-  } in
+  let def =
+    {
+      id;
+      params = pd_l;
+      type_t = ret_type;
+      local_defs = [];
+      (* will be added later *)
+      body = None;
+      (* will be added later *)
+      loc;
+      parent_path = sym_tbl.parent_path;
+      status = Defined;
+    }
+  in
   let sem () =
     Sem.sem_header def;
     Sem.sem_func_def def sym_tbl;
     Sem.ins_func_def def sym_tbl;
     wrap_open_scope id sym_tbl;
-    List.iter (
-      fun (pd : Ast.param_def) ->
+    List.iter
+      (fun (pd : param_def) ->
         pd.frame_offset <- Symbol.get_and_increment_offset sym_tbl;
+        pd.parent_path <- sym_tbl.parent_path;
         Sem.sem_param_def pd sym_tbl;
-        Sem.ins_param_def pd sym_tbl
-    ) pd_l
+        Sem.ins_param_def pd sym_tbl)
+      pd_l
   in
   enjoy sem def
 
-let wrap_func_decl (func : Ast.func) = func
+let wrap_func_decl (func : func) = func
 
-let wrap_func_def (func : Ast.func) (ld_l : Ast.local_def list) (b : Ast.block) =
+let wrap_func_def (func : func) (ld_l : local_def list) (b : block) =
   func.local_defs <- ld_l;
   func.body <- Some b;
   func
 
-let wrap_local_def_fdef (func : Ast.func) = [Ast.FuncDef func]
-let wrap_local_def_fdecl (func : Ast.func) = [Ast.FuncDecl func]
-let wrap_local_def_var (vd_l : Ast.var_def list) = List.map (fun vd -> Ast.VarDef vd) vd_l
+let wrap_local_def_fdef (func : func) = [ FuncDef func ]
+let wrap_local_def_fdecl (func : func) = [ FuncDecl func ]
 
-let wrap_program (func : Ast.func) = Ast.MainFunc func
+let wrap_local_def_var (vd_l : var_def list) =
+  List.map (fun vd -> VarDef vd) vd_l
+
+let wrap_program (func : func) sym_tbl =
+  let program = MainFunc func in
+  let sem () = Sem.sem_program program sym_tbl in
+  enjoy sem program
