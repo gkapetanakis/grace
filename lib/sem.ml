@@ -230,3 +230,55 @@ let sem_stmt stmt sym_tbl =
         raise (Semantic_error (loc, "Return type mismatch"))
       else ()
   | _ -> ()
+
+let sem_header (func : Ast.func) =
+  match func.type_t with
+  | Ast.Array _ -> raise (Semantic_error (func.loc, "Return type cannot be array"))
+  | _ -> ()
+
+let sem_func_decl (func : Ast.func) (sym_tbl : symbol_table) =
+  match lookup func.id sym_tbl with
+  | Some _ ->
+      raise
+        (Semantic_error (func.loc, "Function already exists in current scope"))
+  | None -> ()
+
+let ins_func_decl (func : Ast.func) (sym_tbl : symbol_table) =
+  insert func.loc func.id (Function (ref func)) sym_tbl
+
+let sem_func_def (func : Ast.func) (sym_tbl : symbol_table) =
+  match lookup func.id sym_tbl with
+  | None -> ()
+  | Some {type_t;_} ->
+    match type_t with
+    | Function fdr ->
+        let fd = !fdr in
+        if fd.status = Ast.Defined then
+          raise
+            (Semantic_error
+               (func.loc, "Function already defined in current scope"))
+    | _ -> raise (Semantic_error (func.loc, "Name is not a function"))
+
+let ins_func_def (func : Ast.func) (sym_tbl : symbol_table) =
+  insert func.loc func.id (Function (ref func)) sym_tbl
+
+let sem_program (program : Ast.program) (sym_tbl : symbol_table) =
+  let main = (match program with MainFunc f -> f) in
+  if List.length main.params <> 0 then
+    raise (Semantic_error (main.loc, "Main function cannot have parameters"))
+  else if main.type_t <> Nothing then
+    raise (Semantic_error (main.loc, "Main function cannot have return type"))
+  else
+  let tbl = sym_tbl.table in
+  Hashtbl.iter (
+    fun _ value -> match value.type_t with
+      | Function fdr ->
+        let fd = !fdr in
+        if fd.status = Ast.Declared then
+          raise
+            (Semantic_error
+               (fd.loc, "Function " ^ fd.id ^ " not defined"))
+        else raise (Semantic_error (fd.loc, "Lingering function definition " ^ fd.id))
+      | Variable v -> raise (Semantic_error (!v.loc, "Lingering variable definition " ^ !v.id))
+      | Parameter p -> raise (Semantic_error (!p.loc, "Lingering parameter definition " ^ !p.id))
+  ) tbl; program

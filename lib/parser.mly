@@ -134,7 +134,7 @@ let stmt :=
   | SEMICOLON;
     { wrap_stmt_empty $loc tbl }
   | lv = l_value; ASSIGN; e = expr; SEMICOLON;
-    { wrap_stmt_l_value $loc lv e tbl }
+    { wrap_stmt_assign $loc lv e tbl }
   | b = block;
     { wrap_stmt_block $loc b tbl }
   | fc = func_call; SEMICOLON;
@@ -150,11 +150,11 @@ let stmt :=
 
 let decl_header :=
   | FUN; id = ID; LEFT_PAR; fd_l = flatten(separated_list(SEMICOLON, param_def)); RIGHT_PAR; COLON; rt = ret_type;
-    { wrap_decl_header $loc(id) (id, fd_l, rt) tbl }
+    { wrap_decl_header $loc(id) id fd_l rt tbl }
 
 let def_header :=
   | FUN; id = ID; LEFT_PAR; fd_l = flatten(separated_list(SEMICOLON, param_def)); RIGHT_PAR; COLON; rt = ret_type;
-    { wrap_def_header $loc(id) (id, fd_l, rt) tbl }
+    { wrap_def_header $loc(id) id fd_l rt tbl }
 
 let func_decl :=
   | h = decl_header; SEMICOLON;
@@ -162,16 +162,16 @@ let func_decl :=
 
 let func_def :=
   | h = def_header; ld_l = flatten(list(local_def)); b = block;
-    { wrap_close_scope $loc tbl ;wrap_func_def $loc(h) (h, ld_l, b) }
+    { wrap_close_scope $loc tbl ;wrap_func_def $loc(h) h ld_l b }
 
 let local_def :=
   | fd = func_def;
-    { wrap_local_def $loc (`FuncDef fd) }
+    { wrap_local_def_fdef fd }
   | fd = func_decl;
-    { wrap_local_def $loc (`FuncDecl fd) }
-  | vd = var_def;
-    { wrap_local_def $loc (`VarDefList vd) }
+    { wrap_local_def_fdecl fd }
+  | vd_l = var_def;
+    { wrap_local_def_var vd_l }
 
 let program :=
   | midrule({ wrap_open_scope tbl }); fd = func_def; EOF;
-    { wrap_close_scope $loc tbl; wrap_program $loc (Ast.MainFunc fd) }
+    { wrap_close_scope $loc tbl; wrap_program fd }

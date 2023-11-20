@@ -30,7 +30,7 @@ type param_def = {
   id : string;
   type_t : param_type;
   pass_by : pass_by;
-  frame_offset : int;
+  mutable frame_offset : int;
   parent_path : string list;
   loc : loc;
 }
@@ -88,8 +88,8 @@ type func = {
   id : string;
   params : param_def list;
   type_t : ret_type;
-  local_defs : local_def list;
-  body : block option;
+  mutable local_defs : local_def list;
+  mutable body : block option;
   loc : loc;
   parent_path : string list;
   status : func_status;
