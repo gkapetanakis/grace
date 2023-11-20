@@ -85,7 +85,22 @@ let wrap_l_value_string loc str exprs sym_tbl =
   let sem () = Sem.sem_l_value l_value sym_tbl in
   enjoy sem l_value
 
-let wrap_func_call loc id exprs sym_tbl = ()
+let wrap_func_call loc id exprs (sym_tbl : Symbol.symbol_table) =
+  let func_call : func_call =
+    {
+      id;
+      args = [];
+      (* will be set in sem_func_call *)
+      type_t = Nothing;
+      (* will be set in sem_func_call *)
+      callee_path = [];
+      (* will be set in sem_func_call *)
+      caller_path = sym_tbl.parent_path;
+      loc;
+    }
+  in
+  let sem () = Sem.sem_func_call func_call exprs sym_tbl in
+  enjoy sem func_call
 
 let wrap_expr_lit_int loc num sym_tbl =
   let expr : expr = LitInt { lit_int = num; loc } in
@@ -97,8 +112,8 @@ let wrap_expr_lit_char loc chr sym_tbl =
   let sem () = Sem.sem_expr expr sym_tbl in
   enjoy sem expr
 
-let wrap_expr_l_value loc lv sym_tbl =
-  let expr : expr = LValue { l_value = lv; loc } in
+let wrap_expr_l_value _loc lv sym_tbl =
+  let expr : expr = LValue lv in
   let sem () = Sem.sem_expr expr sym_tbl in
   enjoy sem expr
 
@@ -168,7 +183,12 @@ let wrap_stmt_while _loc c s sym_tbl =
   let sem () = Sem.sem_stmt stmt sym_tbl in
   enjoy sem stmt
 
-let wrap_stmt_return _loc e sym_tbl =
-  let stmt : stmt = Return e in
+let wrap_stmt_return loc e_o sym_tbl =
+  let stmt : stmt = Return { expr_o = e_o; loc } in
   let sem () = Sem.sem_stmt stmt sym_tbl in
   enjoy sem stmt
+
+let wrap_decl_header () = ()
+let wrap_def_header () = ()
+let wrap_func_decl () = ()
+let wrap_func_def () = ()

@@ -53,17 +53,17 @@ type l_value =
 
 and func_call = {
   id : string;
-  args : (expr * pass_by) list;
-  type_t : ret_type;
-  loc : loc;
-  callee_path : string list;
+  mutable args : (expr * pass_by) list;
+  mutable type_t : ret_type;
+  mutable callee_path : string list;
   caller_path : string list;
+  loc : loc;
 }
 
 and expr =
   | LitInt of { lit_int : int; loc : loc }
   | LitChar of { lit_char : char; loc : loc }
-  | LValue of { l_value : l_value; loc : loc }
+  | LValue of l_value
   | EFuncCall of func_call
   | UnAritOp of un_arit_op * expr
   | BinAritOp of expr * bin_arit_op * expr
@@ -82,7 +82,7 @@ and stmt =
   | SFuncCall of func_call
   | If of cond * stmt option * stmt option
   | While of cond * stmt
-  | Return of expr option
+  | Return of { expr_o : expr option; loc : loc }
 
 type func = {
   id : string;
