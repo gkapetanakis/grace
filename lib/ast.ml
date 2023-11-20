@@ -1,7 +1,12 @@
 type loc = Lexing.position * Lexing.position
-
 type data_type = Int | Char | Nothing | Array of data_type * int option list
-type data_type_rec = RInt | RChar | RNothing | RArray of data_type_rec * int option
+
+type data_type_rec =
+  | RInt
+  | RChar
+  | RNothing
+  | RArray of data_type_rec * int option
+
 type un_arit_op = Pos | Neg
 type bin_arit_op = Add | Sub | Mul | Div | Mod
 type un_logic_op = Not
@@ -39,11 +44,7 @@ type l_value_id = {
   loc : loc;
 }
 
-type l_value_lstring = {
-  id : string;
-  type_t : data_type;
-  loc : loc;
-}
+type l_value_lstring = { id : string; type_t : data_type; loc : loc }
 
 type l_value =
   | Id of l_value_id
@@ -68,9 +69,9 @@ and expr =
   | BinAritOp of expr * bin_arit_op * expr
 
 type cond =
-| UnLogicOp of un_logic_op * cond
-| BinLogicOp of cond * bin_logic_op * cond
-| CompOp of expr * comp_op * expr
+  | UnLogicOp of un_logic_op * cond
+  | BinLogicOp of cond * bin_logic_op * cond
+  | CompOp of expr * comp_op * expr
 
 type block = stmt list
 
@@ -91,25 +92,20 @@ type func = {
   body : block option;
   loc : loc;
   parent_path : string list;
-  status : func_status
+  status : func_status;
 }
 
-and local_def =
-  | VarDef of var_def
-  | FuncDecl of func
-  | FuncDef of func
+and local_def = VarDef of var_def | FuncDecl of func | FuncDef of func
 
 type program = MainFunc of func
 
 let create_var_type dt dims =
-  match dims with
-  | [] -> dt
-  | _ -> Array (dt, List.map (fun x -> Some x) dims)
+  match dims with [] -> dt | _ -> Array (dt, List.map (fun x -> Some x) dims)
 
 let create_param_type dt dims flexible =
   match (dims, flexible) with
   | [], false -> dt
-  | (_ :: _) as dims, false -> Array (dt, List.map (fun x -> Some x) dims)
+  | (_ :: _ as dims), false -> Array (dt, List.map (fun x -> Some x) dims)
   | dims, true -> Array (dt, None :: List.map (fun x -> Some x) dims)
 
 let rec l_string_dependence = function
@@ -118,32 +114,37 @@ let rec l_string_dependence = function
   | ArrayAccess (lv, _) -> l_string_dependence lv
 
 let reorganize_local_defs (local_defs : local_def list) =
-  let rec reorganize_local_defs' (local_defs : local_def list) (vars : var_def list) (decls : func list) (funcs : func list) =
+  let rec reorganize_local_defs' (local_defs : local_def list)
+      (vars : var_def list) (decls : func list) (funcs : func list) =
     match local_defs with
     | [] -> (vars, funcs, decls)
-    | VarDef v :: local_defs -> reorganize_local_defs' local_defs (v :: vars) decls funcs
-    | FuncDecl f :: local_defs -> reorganize_local_defs' local_defs vars (f :: decls) funcs
-    | FuncDef f :: local_defs -> reorganize_local_defs' local_defs vars decls (f :: funcs)
+    | VarDef v :: local_defs ->
+        reorganize_local_defs' local_defs (v :: vars) decls funcs
+    | FuncDecl f :: local_defs ->
+        reorganize_local_defs' local_defs vars (f :: decls) funcs
+    | FuncDef f :: local_defs ->
+        reorganize_local_defs' local_defs vars decls (f :: funcs)
   in
-  let (vars, funcs, decls) = reorganize_local_defs' local_defs [] [] [] in
-  (List.rev vars, List.rev decls,  List.rev funcs)
+  let vars, funcs, decls = reorganize_local_defs' local_defs [] [] [] in
+  (List.rev vars, List.rev decls, List.rev funcs)
 
 let rec data_type_to_rec = function
   | Int -> RInt
   | Char -> RChar
   | Nothing -> RNothing
   | Array (dt, dims) ->
-    let rec aux dt dims =
-      match dims with
-      | [] -> data_type_to_rec dt
-      | dim :: dims -> RArray (aux dt dims, dim)
-    in aux dt dims
+      let rec aux dt dims =
+        match dims with
+        | [] -> data_type_to_rec dt
+        | dim :: dims -> RArray (aux dt dims, dim)
+      in
+      aux dt dims
 
 let rec rec_data_type_to_normal = function
   | RInt -> Int
   | RChar -> Char
   | RNothing -> Nothing
-  | RArray (dt, dim) ->
-    match rec_data_type_to_normal dt with
-    | Array (dt, dims) -> Array (dt, dim :: dims)
-    | dt -> Array (dt, [dim])
+  | RArray (dt, dim) -> (
+      match rec_data_type_to_normal dt with
+      | Array (dt, dims) -> Array (dt, dim :: dims)
+      | dt -> Array (dt, [ dim ]))

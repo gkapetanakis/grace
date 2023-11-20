@@ -97,56 +97,56 @@ let l_value :=
     { wrap_l_value_string $loc str exprs tbl }
 
 let func_call :=
-  | id = ID; LEFT_PAR; e_l = separated_list(COMMA, expr); RIGHT_PAR;
-    { wrap_func_call $loc (ref id, e_l) tbl }
+  | id = ID; LEFT_PAR; exprs = separated_list(COMMA, expr); RIGHT_PAR;
+    { wrap_func_call $loc id exprs tbl }
 
 let expr :=
   | li = LIT_INT;
-    { wrap_expr $loc (Ast.LitInt li) tbl }
+    { wrap_expr_lit_int $loc li tbl }
   | lc = LIT_CHAR;
-    { wrap_expr $loc (Ast.LitChar lc) tbl }
+    { wrap_expr_lit_char $loc lc tbl }
   | lv = l_value;
-    { wrap_expr $loc (Ast.LValue lv) tbl }
+    { wrap_expr_l_value $loc lv tbl }
   | LEFT_PAR; ~ = expr; RIGHT_PAR;
     { expr }
   | fc = func_call;
-    { wrap_expr $loc (Ast.EFuncCall fc) tbl }
+    { wrap_expr_func_call $loc (Ast.EFuncCall fc) tbl }
   | op = un_arit_op; e = expr; %prec USIGN
-    { wrap_expr $loc (Ast.UnAritOp (op, e)) tbl }  (* Semantic: expr should be int *)
+    { wrap_expr_un_arit_op $loc op e tbl }  (* Semantic: e should be int *)
   | e1 = expr;  op = bin_arit_op; e2 = expr;
-    { wrap_expr $loc (Ast.BinAritOp (e1, op, e2)) tbl } (* Semantic: e{1,2} should be both int *)
+    { wrap_expr $loc op e1 e2 tbl } (* Semantic: e1, e2 should be both int *)
 
 let cond :=
   | LEFT_PAR; c = cond; RIGHT_PAR;
     { c }
   | op = un_logic_op; c = cond; %prec UNOT
-    { wrap_cond $loc (Ast.UnLogicOp (op, c)) tbl }
+    { wrap_cond_un_logic_op $loc op c tbl }
   | c1 = cond; op = bin_logic_op; c2 = cond;
-    { wrap_cond $loc (Ast.BinLogicOp (c1, op, c2)) tbl } (* AND/OR should be short-circuited, added after semantic analysis? *)
+    { wrap_cond_bin_logic_op $loc op c1 c2 tbl } (* AND/OR should be short-circuited, added after semantic analysis? *)
   | e1 = expr; op = comp_op ; e2 = expr; (* %prec UCOMP *)
-    { wrap_cond $loc (Ast.CompOp (e1, op, e2)) tbl } (* Semantic: e{1,2} should be both int or both char *)
+    { wrap_cond_comp_op $loc op e1 e2 tbl } (* Semantic: e{1,2} should be both int or both char *)
 
 let block :=
-  | LEFT_CURL; s_l = list(stmt); RIGHT_CURL;
-    { wrap_block $loc s_l }
+  | LEFT_CURL; stmts = list(stmt); RIGHT_CURL;
+    { wrap_block $loc stmts tbl }
 
 let stmt :=
   | SEMICOLON;
-    { wrap_stmt $loc Ast.Empty tbl }
+    { wrap_stmt_empty $loc tbl }
   | lv = l_value; ASSIGN; e = expr; SEMICOLON;
-    { wrap_stmt $loc (Ast.Assign (lv, e)) tbl }
+    { wrap_stmt_l_value $loc lv e tbl }
   | b = block;
-    { wrap_stmt $loc (Ast.Block b) tbl }
+    { wrap_stmt_block $loc b tbl }
   | fc = func_call; SEMICOLON;
-    { wrap_stmt $loc (Ast.SFuncCall fc) tbl }
+    { wrap_stmt_func_call $loc fc tbl }
   | IF; c = cond; THEN; s = stmt;
-    { wrap_stmt $loc (Ast.If (c, Some s, None)) tbl }
+    { wrap_stmt_if $loc c (Some s) None tbl }
   | IF; c = cond; THEN; s1 = stmt; ELSE; s2 = stmt;
-    { wrap_stmt $loc (Ast.If (c, Some s1, Some s2)) tbl }
+    { wrap_stmt_if $loc c (Some s1) (Some s2) tbl }
   | WHILE; c = cond; DO; s = stmt;
-    { wrap_stmt $loc (Ast.While (c, s)) tbl }
+    { wrap_stmt_while $loc c s tbl }
   | RETURN; e_o = option(expr); SEMICOLON;
-    { wrap_stmt $loc (Ast.Return e_o) tbl }
+    { wrap_stmt_return $loc e_o tbl }
 
 let decl_header :=
   | FUN; id = ID; LEFT_PAR; fd_l = flatten(separated_list(SEMICOLON, param_def)); RIGHT_PAR; COLON; rt = ret_type;
