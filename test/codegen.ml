@@ -3,7 +3,7 @@ open Arg
 let filenames = ref []
 
 let usage_msg =
-  "Usage: parser --file <filename> --files <filename1> <filename2> ..."
+  "Usage: codegen --file <filename> --files <filename1> <filename2> ..."
 
 let speclist =
   [
@@ -15,7 +15,7 @@ let speclist =
       "Input file names" );
   ]
 
-let () =
+  let () =
   Arg.parse speclist (fun _ -> ()) usage_msg;
   let test filename =
     let chan = open_in filename in
@@ -24,7 +24,8 @@ let () =
     try
       print_endline filename;
       let ast_node = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
-      ast_node |> Grace_lib.Print_ast.pr_program |> print_string;
+      Grace_lib.Codegen.gen_all_frame_types ast_node;
+      List.iter (fun named_type -> print_endline (Llvm.string_of_lltype (Llvm.element_type named_type))) (Grace_lib.Codegen.get_all_frame_types ast_node);
 
       print_string "\n====================\n\n"
     with

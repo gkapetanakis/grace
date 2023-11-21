@@ -173,5 +173,5 @@ let local_def :=
     { wrap_local_def_var vd_l }
 
 let program :=
-  | midrule({ wrap_open_scope String.empty tbl }); fd = func_def; EOF;
+  | midrule({ wrap_open_scope "global" tbl }); fd = func_def; EOF;
     { wrap_close_scope $loc tbl; wrap_program fd tbl }

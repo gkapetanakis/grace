@@ -1,10 +1,9 @@
-open Grace_lib
 open Arg
 
 let filenames = ref []
 
 let usage_msg =
-  "Usage: parser --file <filename> --files <filename1> <filename2> ..."
+  "Usage: lexer --file <filename> --files <filename1> <filename2> ..."
 
 let speclist =
   [
@@ -25,14 +24,14 @@ let () =
     let rec tokenize_and_print () =
       try
         (* call the lexer's 'token' rule (tokenize input) *)
-        let token = Lexer.token lexbuf in
+        let token = Grace_lib.Lexer.token lexbuf in
         (* print found tokens *)
         match token with
-        | Tokens.EOF -> ()
+        | Grace_lib.Tokens.EOF -> ()
         | _ ->
-            Lexer_utils.string_of_token token |> print_endline;
+            Grace_lib.Lexer_utils.string_of_token token |> print_endline;
             tokenize_and_print ()
-      with Error.Lexing_error (loc, msg) -> Error.pr_lexing_error (loc, msg)
+      with Grace_lib.Error.Lexing_error (loc, msg) -> Grace_lib.Error.pr_lexing_error (loc, msg)
     in
     print_endline filename;
     tokenize_and_print ();

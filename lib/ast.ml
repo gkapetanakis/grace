@@ -117,15 +117,15 @@ let reorganize_local_defs (local_defs : local_def list) =
   let rec reorganize_local_defs' (local_defs : local_def list)
       (vars : var_def list) (decls : func list) (funcs : func list) =
     match local_defs with
-    | [] -> (vars, funcs, decls)
+    | [] -> (vars, decls, funcs)
     | VarDef v :: local_defs ->
         reorganize_local_defs' local_defs (v :: vars) decls funcs
-    | FuncDecl f :: local_defs ->
-        reorganize_local_defs' local_defs vars (f :: decls) funcs
+    | FuncDecl d :: local_defs ->
+        reorganize_local_defs' local_defs vars (d :: decls) funcs
     | FuncDef f :: local_defs ->
         reorganize_local_defs' local_defs vars decls (f :: funcs)
   in
-  let vars, funcs, decls = reorganize_local_defs' local_defs [] [] [] in
+  let vars, decls, funcs = reorganize_local_defs' local_defs [] [] [] in
   (List.rev vars, List.rev decls, List.rev funcs)
 
 let rec data_type_to_rec = function
