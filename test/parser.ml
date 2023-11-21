@@ -38,6 +38,9 @@ let () =
     | Error.Symbol_table_error (loc, msg) ->
         Error.pr_symbol_table_error (loc, msg);
         Print_symbol.pr_symbol_table "" true Wrapper.tbl |> print_endline
+    | Parser.Error -> (* built-in Menhir error... *)
+        Error.pr_parser_error ((Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf), "Syntax error");
+        Print_symbol.pr_symbol_table "" true Wrapper.tbl |> print_endline
   in
 
   List.iter test !filenames

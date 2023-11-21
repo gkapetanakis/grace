@@ -23,3 +23,6 @@ let pr_semantic_error (loc, msg) =
 
 let pr_symbol_table_error (loc, msg) =
   prerr_endline ("Symbol table error at " ^ string_of_loc loc ^ ": " ^ msg)
+
+let pr_parser_error (loc, msg) =
+  prerr_endline ("Parser error at " ^ string_of_loc loc ^ ": " ^ msg)
