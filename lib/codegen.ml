@@ -225,9 +225,9 @@ let rec codegen_cond (cond : Ast.cond) =
       in
       Llvm.position_at_end rhs_block builder;
       let rhs = codegen_cond cond2 in
-      let result = Llvm.build_or lhs rhs "op" builder in
+      let _ = Llvm.build_br merge_block builder in
       Llvm.position_at_end merge_block builder;
-      Llvm.build_phi [ (result, lhs_block); (rhs, rhs_block) ] "phi" builder
+      Llvm.build_phi [ (lhs, lhs_block); (rhs, rhs_block) ] "phi" builder
   | Ast.CompOp (expr1, op, expr2) -> (
       let lhs = codegen_expr expr1 in
       let rhs = codegen_expr expr2 in
