@@ -96,8 +96,9 @@ and pr_func_call off enable (fc : func_call) =
     ^ String.concat ""
         (List.mapi
            (fun i (e, pb) ->
+            off ^ sep ^ (if pb = Reference then "by reference" else "by value") ^ ": " ^ endl ^
              pr_expr
-               (off ^ sep ^ if pb = Reference then "ref " else "")
+               (off ^ sep ^ sep)
                (i <> List.length fc.args - 1)
                e)
            fc.args)
