@@ -96,11 +96,10 @@ and pr_func_call off enable (fc : func_call) =
     ^ String.concat ""
         (List.mapi
            (fun i (e, pb) ->
-            off ^ sep ^ (if pb = Reference then "by reference" else "by value") ^ ": " ^ endl ^
-             pr_expr
-               (off ^ sep ^ sep)
-               (i <> List.length fc.args - 1)
-               e)
+             off ^ sep
+             ^ (if pb = Reference then "by reference" else "by value")
+             ^ ": " ^ endl
+             ^ pr_expr (off ^ sep ^ sep) (i <> List.length fc.args - 1) e)
            fc.args)
     ^ ")" ^ endl ^ off ^ sep ^ "callee["
     ^ String.concat "_" (List.rev fc.callee_path)

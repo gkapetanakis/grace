@@ -30,16 +30,23 @@ let () =
     with
     | Grace_lib.Error.Lexing_error (loc, msg) ->
         Grace_lib.Error.pr_lexing_error (loc, msg);
-        Grace_lib.Print_symbol.pr_symbol_table "" true Grace_lib.Wrapper.tbl |> print_endline
-    | Grace_lib.Parser.Error -> (* built-in Menhir error... *)
-        Grace_lib.Error.pr_parser_error ((Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf), "Syntax error");
-        Grace_lib.Print_symbol.pr_symbol_table "" true Grace_lib.Wrapper.tbl |> print_endline
+        Grace_lib.Print_symbol.pr_symbol_table "" true Grace_lib.Wrapper.tbl
+        |> print_endline
+    | Grace_lib.Parser.Error ->
+        (* built-in Menhir error... *)
+        Grace_lib.Error.pr_parser_error
+          ( (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf),
+            "Syntax error" );
+        Grace_lib.Print_symbol.pr_symbol_table "" true Grace_lib.Wrapper.tbl
+        |> print_endline
     | Grace_lib.Error.Semantic_error (loc, msg) ->
         Grace_lib.Error.pr_semantic_error (loc, msg);
-        Grace_lib.Print_symbol.pr_symbol_table "" true Grace_lib.Wrapper.tbl |> print_endline
+        Grace_lib.Print_symbol.pr_symbol_table "" true Grace_lib.Wrapper.tbl
+        |> print_endline
     | Grace_lib.Error.Symbol_table_error (loc, msg) ->
         Grace_lib.Error.pr_symbol_table_error (loc, msg);
-        Grace_lib.Print_symbol.pr_symbol_table "" true Grace_lib.Wrapper.tbl |> print_endline
+        Grace_lib.Print_symbol.pr_symbol_table "" true Grace_lib.Wrapper.tbl
+        |> print_endline
   in
 
   List.iter test !filenames

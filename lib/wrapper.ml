@@ -22,9 +22,8 @@ let wrap_close_scope loc sym_tbl =
   match !mode with
   | AstOnly -> ()
   | All ->
-    Sem.sem_close_scope loc sym_tbl;
-    Symbol.close_scope loc sym_tbl
-
+      Sem.sem_close_scope loc sym_tbl;
+      Symbol.close_scope loc sym_tbl
 
 let wrap_var_def loc id vt sym_tbl =
   let var_def : var_def =

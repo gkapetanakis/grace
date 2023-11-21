@@ -31,7 +31,8 @@ let () =
         | _ ->
             Grace_lib.Lexer_utils.string_of_token token |> print_endline;
             tokenize_and_print ()
-      with Grace_lib.Error.Lexing_error (loc, msg) -> Grace_lib.Error.pr_lexing_error (loc, msg)
+      with Grace_lib.Error.Lexing_error (loc, msg) ->
+        Grace_lib.Error.pr_lexing_error (loc, msg)
     in
     print_endline filename;
     tokenize_and_print ();

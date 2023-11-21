@@ -63,7 +63,9 @@ let open_scope (func_id : string) (sym_tbl : symbol_table) =
 let close_scope loc (sym_tbl : symbol_table) =
   match sym_tbl.scopes with
   | [] -> raise (Symbol_table_error (loc, "Tried to close empty symbol table"))
-  | hd :: tl ->
+  | hd :: tl -> (
       List.iter (fun entry -> Hashtbl.remove sym_tbl.table entry.id) hd.entries;
       sym_tbl.scopes <- tl;
-      match sym_tbl.parent_path with _ :: t -> sym_tbl.parent_path <- t | _ -> ()
+      match sym_tbl.parent_path with
+      | _ :: t -> sym_tbl.parent_path <- t
+      | _ -> ())
