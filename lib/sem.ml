@@ -3,7 +3,7 @@ open Symbol
 open Error
 
 (* used to compare function declarations with definitions and find undefined declarations *)
-module SetString = Set.Make (String)
+module StringSet = Set.Make (String)
 
 (* before closing a scope check for lingering declarations *)
 let sem_close_scope loc sym_tbl =
@@ -30,18 +30,18 @@ let sem_close_scope loc sym_tbl =
         | Function fdr ->
           let fd = !fdr in
           if fd.status = Declared then
-            let decl_set = SetString.add fd.id decl_set in
+            let decl_set = StringSet.add fd.id decl_set in
             aux tl def_set decl_set
           else
-            let def_set = SetString.add fd.id def_set in
+            let def_set = StringSet.add fd.id def_set in
             aux tl def_set decl_set
         | _ -> aux tl def_set decl_set
     in
-    let def_set, decl_set = aux scope.entries SetString.empty SetString.empty in
+    let def_set, decl_set = aux scope.entries StringSet.empty StringSet.empty in
     (* check if all declared functions have been defined *)
-    SetString.iter
+    StringSet.iter
       (fun id ->
-        if not (SetString.mem id def_set) then
+        if not (StringSet.mem id def_set) then
           raise (Semantic_error (get_loc id sym_tbl, "Function " ^ id ^ " declared, but not defined")))
       decl_set
 
@@ -213,8 +213,8 @@ let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
       let type_t, dims = (* type_t will be the element type of this array *)
         match l_val_type with
         | Array (type_t, dims) -> (type_t, dims)
-        | _ -> raise (Semantic_error (loc, "Trying to access elements of non array"))
-      in
+        | _ -> raise (Semantic_error (loc, "Trying to access elements of non array")
+      ) in
       let dims = comp_dims_exprs dims exprs loc in
       match dims with
       | [] -> (loc, type_t)
@@ -360,16 +360,16 @@ let sem_program (program : Ast.program) (sym_tbl : symbol_table) =
             let fd = !fdr in
             if fd.status = Ast.Declared then
               raise
-                (Semantic_error (fd.loc, "Lingering function declaration " ^ fd.id))
+                (Symbol_table_error (fd.loc, "Lingering function declaration " ^ fd.id))
             else
               raise
-                (Semantic_error
+                (Symbol_table_error
                    (fd.loc, "Lingering function definition " ^ fd.id))
         | Variable v ->
             raise
-              (Semantic_error (!v.loc, "Lingering variable definition " ^ !v.id))
+              (Symbol_table_error (!v.loc, "Lingering variable definition " ^ !v.id))
         | Parameter p ->
             raise
-              (Semantic_error (!p.loc, "Lingering parameter definition " ^ !p.id)))
+              (Symbol_table_error (!p.loc, "Lingering parameter definition " ^ !p.id)))
       sym_tbl.table;
     program
