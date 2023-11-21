@@ -104,7 +104,7 @@ let get_func_name (func : Ast.func) = get_parent_name func ^ "." ^ func.id
 let get_parent_frame_name (func : Ast.func) = "frame__" ^ get_parent_name func
 let get_frame_name (func : Ast.func) = "frame__" ^ get_func_name func
 
-let get_parent_frame_ptr (func : Ast.func) =
+let get_parent_frame_type_ptr (func : Ast.func) =
   let parent_frame_name = get_parent_frame_name func in
   match Llvm.type_by_name the_module parent_frame_name with
   | Some frame -> Llvm.pointer_type frame
@@ -117,23 +117,24 @@ let get_frame_type (func : Ast.func) =
   | None -> raise (Failure ("Frame type not found: " ^ frame_name))
 
 let get_all_frame_types (Ast.MainFunc main_func : Ast.program) =
-  let rec aux (acc : Llvm.lltype list) (funcs : Ast.func list) =
+  let rec aux (acc : Llvm.lltype list) (funcs : Ast.func list list) =
     match funcs with
     | [] -> List.rev acc
-    | hd :: tl ->
+    | [] :: tl -> aux acc tl
+    | (hd :: tl1) :: tl2 ->
         let _, _, local_func_defs = Ast.reorganize_local_defs hd.local_defs in
-        aux (get_frame_type hd :: acc) (tl @ local_func_defs)
+        aux (get_frame_type hd :: acc) (local_func_defs :: tl1 :: tl2)
   in
-  aux [] [ main_func ]
+  aux [] [ [ main_func ] ]
 
 let gen_frame_type (func : Ast.func) =
-  let parent_frame_ptr = get_parent_frame_ptr func in
+  let parent_frame_type_ptr = get_parent_frame_type_ptr func in
   let param_lltypes = List.map param_def_lltype func.params in
   let local_var_defs, _, _ = Ast.reorganize_local_defs func.local_defs in
   let local_var_lltypes = List.map var_def_lltype local_var_defs in
   let frame_name = get_frame_name func in
   let frame_field_types =
-    Array.of_list ((parent_frame_ptr :: param_lltypes) @ local_var_lltypes)
+    Array.of_list ( parent_frame_type_ptr :: param_lltypes @ local_var_lltypes)
   in
   let frame_type = Llvm.named_struct_type context frame_name in
   Llvm.struct_set_body frame_type frame_field_types false

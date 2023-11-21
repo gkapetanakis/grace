@@ -160,6 +160,16 @@ let wrap_block _loc stmts =
     (fun stmt acc -> match stmt with Return _ -> [ stmt ] | _ -> stmt :: acc)
     stmts []
 
+(*let rec wrap_block _loc stmts =
+  (* the essence of functional programming *)
+  List.concat (List.fold_right
+    (fun stmt acc ->
+      match stmt with
+      | Return _ -> [ [ stmt ] ]
+      | Block b -> (wrap_block _loc b) :: acc
+      | _ -> [ stmt ] :: acc)
+    stmts [])*)
+
 let wrap_stmt_empty _loc sym_tbl =
   let stmt : stmt = Empty in
   let sem () = Sem.sem_stmt stmt sym_tbl in

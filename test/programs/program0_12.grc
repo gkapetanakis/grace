@@ -12,6 +12,7 @@ fun main(): nothing
     {
       b <- b + a; $ use parameter a
     }
+
   {
     aux_inner(f); $ use variable f
   }
