@@ -100,9 +100,9 @@ let param_def_lltype (pd : Ast.param_def) =
   }
 *)
 
-let get_parent_name (func: Ast.func) = String.concat "_" (List.rev func.parent_path)
+let get_parent_name (func: Ast.func) = String.concat "." (List.rev func.parent_path)
 
-let get_func_name (func: Ast.func) = (get_parent_name func) ^ "_" ^ func.id
+let get_func_name (func: Ast.func) = (get_parent_name func) ^ "." ^ func.id
 
 let get_parent_frame_name (func: Ast.func) = "frame__" ^ (get_parent_name func)
 
