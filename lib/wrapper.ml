@@ -154,14 +154,22 @@ let wrap_cond_comp_op _loc op lhs rhs sym_tbl =
   let sem () = Sem.sem_cond cond sym_tbl in
   enjoy sem cond
 
-let wrap_block _loc stmts =
-  (* the essence of functional programming *)
+let wrap_block2 _loc stmts =
+  (* the joys of functional programming *)
   List.fold_right
     (fun stmt acc -> match stmt with Return _ -> [ stmt ] | _ -> stmt :: acc)
     stmts []
 
+let wrap_block _loc stmts =
+  []
+  |> (List.fold_right
+        (fun stmt acc ->
+          match stmt with Block b -> b @ acc | _ -> stmt :: acc)
+        stmts []
+     |> List.fold_right (fun stmt acc ->
+            match stmt with Return _ -> [ stmt ] | _ -> stmt :: acc))
+
 (*let rec wrap_block _loc stmts =
-  (* the essence of functional programming *)
   List.concat (List.fold_right
     (fun stmt acc ->
       match stmt with

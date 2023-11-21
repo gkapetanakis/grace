@@ -134,7 +134,7 @@ let gen_frame_type (func : Ast.func) =
   let local_var_lltypes = List.map var_def_lltype local_var_defs in
   let frame_name = get_frame_name func in
   let frame_field_types =
-    Array.of_list ( parent_frame_type_ptr :: param_lltypes @ local_var_lltypes)
+    Array.of_list ((parent_frame_type_ptr :: param_lltypes) @ local_var_lltypes)
   in
   let frame_type = Llvm.named_struct_type context frame_name in
   Llvm.struct_set_body frame_type frame_field_types false
