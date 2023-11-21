@@ -2,6 +2,49 @@ open Ast
 open Symbol
 open Error
 
+(* used to compare function declarations with definitions and find undefined declarations *)
+module SetString = Set.Make (String)
+
+(* before closing a scope check for lingering declarations *)
+let sem_close_scope loc sym_tbl =
+  match sym_tbl.scopes with
+  | [] -> raise (Semantic_error (loc, "Cannot close global scope"))
+  | scope :: _ ->
+    (* given an id, find the location of that id-entry defined in the current scope *)
+    let get_loc id sym_tbl =
+      let entry = lookup id sym_tbl in
+      match entry with
+      | Some { type_t; _ } -> (
+        match type_t with
+        | Function fdr -> !fdr.loc
+        | _ -> raise (Semantic_error (loc, "Name not a function")) (* this error shouldn't happen *)
+      )
+      | None -> raise (Semantic_error (loc, "Name not defined")) (* this error shouldn't happen *)
+    in
+    (* create two sets of strings: one for function definitions and one for function declarations *)
+    let rec aux entries def_set decl_set =
+      match entries with
+      | [] -> (def_set, decl_set)
+      | entry :: tl ->
+        match entry.type_t with
+        | Function fdr ->
+          let fd = !fdr in
+          if fd.status = Declared then
+            let decl_set = SetString.add fd.id decl_set in
+            aux tl def_set decl_set
+          else
+            let def_set = SetString.add fd.id def_set in
+            aux tl def_set decl_set
+        | _ -> aux tl def_set decl_set
+    in
+    let def_set, decl_set = aux scope.entries SetString.empty SetString.empty in
+    (* check if all declared functions have been defined *)
+    SetString.iter
+      (fun id ->
+        if not (SetString.mem id def_set) then
+          raise (Semantic_error (get_loc id sym_tbl, "Function " ^ id ^ " declared, but not defined")))
+      decl_set
+
 let verify_var_def (vd : var_def) =
   match vd.type_t with
   | Array (_, dims) ->
@@ -27,13 +70,13 @@ let verify_param_def (pd : param_def) =
       if
         List.find_opt
           (fun dim -> match dim with None -> false | Some n -> n <= 0)
-          dims
+          dims (* check all dimensions *)
         <> None
       then raise (Semantic_error (pd.loc, "Array dimension must be positive"))
       else if
         List.find_opt
           (fun dim -> match dim with None -> true | _ -> false)
-          tl_dims
+          tl_dims (* don't check the first dimension, because it can be 'None' *)
         <> None
       then raise (Semantic_error (pd.loc, "Array dimension must be specified"))
       else ()
@@ -78,6 +121,7 @@ let type_of_ret loc sym_tbl =
   | Function f -> !f.type_t
   | _ -> raise (Semantic_error (loc, "Return statement outside function"))
 
+(* only lvalues can be passed by reference, all other expressions can't *)
 let check_ref loc expr pass_by =
   match (expr, pass_by) with
   | LValue _, _ -> ()
@@ -85,6 +129,7 @@ let check_ref loc expr pass_by =
   | _, Reference ->
       raise (Semantic_error (loc, "Passing non-l-value by reference"))
 
+(* compare headers of a declaration and definition to see if they match *)
 let compare_heads (decl : func) (def : func) =
   if decl.type_t <> def.type_t then
     raise
@@ -153,20 +198,28 @@ let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
                    (l_val_id.loc, "Function cannot be used as l-value"))))
   | LString { loc; type_t; _ } -> (loc, type_t)
   | ArrayAccess (l_val, exprs) ->
-      let loc, l_val_type = sem_l_value l_val sym_tbl in
-      let type_t, dims =
+      let rec comp_dims_exprs dims exprs loc =
+        match (dims, exprs) with
+        | [], [] -> []
+        | [], _ -> raise (Semantic_error (loc, "Array access dimension count mismatch"))
+        | dims, [] -> dims
+        | _ :: tl_dims, expr :: tl_exprs ->
+            let lloc, expr_type = sem_expr expr sym_tbl in
+            if expr_type <> Int then
+              raise (Semantic_error (lloc, "Array access dimension must be integer"))
+            else comp_dims_exprs tl_dims tl_exprs lloc
+      in
+      let loc, l_val_type = sem_l_value l_val sym_tbl in (* l_val_type will be the full type of this array *)
+      let type_t, dims = (* type_t will be the element type of this array *)
         match l_val_type with
         | Array (type_t, dims) -> (type_t, dims)
-        | _ -> raise (Semantic_error (loc, "Not an array bro"))
+        | _ -> raise (Semantic_error (loc, "Trying to access elements of non array"))
       in
-      let loc_expr_types = List.map (fun expr -> sem_expr expr sym_tbl) exprs in
-      let _, expr_types = List.split loc_expr_types in
-      if List.length dims <> List.length expr_types then
-        raise (Semantic_error (loc, "Array access dimension count mismatch"))
-      else if List.length (List.filter (fun t -> t <> Int) expr_types) <> 0 then
-        raise (Semantic_error (loc, "Array access dimension must be integer"))
-      else (loc, type_t)
-
+      let dims = comp_dims_exprs dims exprs loc in
+      match dims with
+      | [] -> (loc, type_t)
+      | dims -> (loc, Array (type_t, dims))
+      
 and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
   match lookup_all func_call.id sym_tbl with
   | None -> raise (Semantic_error (func_call.loc, "Function not defined"))
@@ -242,7 +295,11 @@ let sem_stmt stmt sym_tbl =
         raise (Semantic_error (loc, "Cannot assign to string literal"))
       else if l_val_type <> expr_type then
         raise (Semantic_error (loc, "Type mismatch"))
-      else ()
+      else (
+        match l_val_type with
+        | Array _ -> raise (Semantic_error (loc, "Cannot assign to array"))
+        | _ -> ()
+      )
   | Return { loc; expr_o } ->
       let expr_type =
         match expr_o with
@@ -295,7 +352,7 @@ let sem_program (program : Ast.program) (sym_tbl : symbol_table) =
   else if main.type_t <> Nothing then
     raise (Semantic_error (main.loc, "Main function cannot have return type"))
   else
-    let tbl = sym_tbl.table in
+    (* check for any lingering things that might be left behind from parsing... *)
     Hashtbl.iter
       (fun _ value ->
         match value.type_t with
@@ -303,7 +360,7 @@ let sem_program (program : Ast.program) (sym_tbl : symbol_table) =
             let fd = !fdr in
             if fd.status = Ast.Declared then
               raise
-                (Semantic_error (fd.loc, "Function " ^ fd.id ^ " not defined"))
+                (Semantic_error (fd.loc, "Lingering function declaration " ^ fd.id))
             else
               raise
                 (Semantic_error
@@ -314,5 +371,5 @@ let sem_program (program : Ast.program) (sym_tbl : symbol_table) =
         | Parameter p ->
             raise
               (Semantic_error (!p.loc, "Lingering parameter definition " ^ !p.id)))
-      tbl;
+      sym_tbl.table;
     program

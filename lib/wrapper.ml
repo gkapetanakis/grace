@@ -17,8 +17,14 @@ let enjoy sem node =
 let wrap_open_scope func_id sym_tbl =
   match !mode with AstOnly -> () | All -> Symbol.open_scope func_id sym_tbl
 
+(* when closing a scope we should check for function definitions/declarations... *)
 let wrap_close_scope loc sym_tbl =
-  match !mode with AstOnly -> () | All -> Symbol.close_scope loc sym_tbl
+  match !mode with
+  | AstOnly -> ()
+  | All ->
+    Sem.sem_close_scope loc sym_tbl;
+    Symbol.close_scope loc sym_tbl
+
 
 let wrap_var_def loc id vt sym_tbl =
   let var_def : var_def =
