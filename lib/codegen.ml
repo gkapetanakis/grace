@@ -150,7 +150,8 @@ let codegen_var_def (var_def : Ast.var_def) =
   let var_name = var_def.id in
   let var_type = var_def_lltype var_def in
   let var = Llvm.build_alloca var_type var_name builder in
-  Hashtbl.add named_values var_name var
+  Hashtbl.add named_values var_name var;
+  var
 
 let codegen_param_def (param_def : Ast.param_def) =
   let param_name = param_def.id in
@@ -234,7 +235,94 @@ let rec codegen_cond (cond : Ast.cond) =
       match op with
       | Ast.Eq -> Llvm.build_icmp Llvm.Icmp.Eq lhs rhs "eq" builder
       | Ast.Neq -> Llvm.build_icmp Llvm.Icmp.Ne lhs rhs "neq" builder
-      | Ast.Lt -> Llvm.build_icmp Llvm.Icmp.Slt lhs rhs "lt" builder
-      | Ast.Leq -> Llvm.build_icmp Llvm.Icmp.Sle lhs rhs "lte" builder
       | Ast.Gt -> Llvm.build_icmp Llvm.Icmp.Sgt lhs rhs "gt" builder
-      | Ast.Geq -> Llvm.build_icmp Llvm.Icmp.Sge lhs rhs "gte" builder)
+      | Ast.Lt -> Llvm.build_icmp Llvm.Icmp.Slt lhs rhs "lt" builder
+      | Ast.Geq -> Llvm.build_icmp Llvm.Icmp.Sge lhs rhs "geq" builder
+      | Ast.Leq -> Llvm.build_icmp Llvm.Icmp.Sle lhs rhs "leq" builder)
+
+let rec codegen_block (stmts : Ast.block) = List.iter codegen_stmt stmts
+
+and codegen_stmt (stmt : Ast.stmt) =
+  match stmt with
+  | Ast.Empty -> ()
+  | Ast.Assign (l_value, expr) ->
+      let lhs = codegen_l_value l_value in
+      let rhs = codegen_expr expr in
+      ignore (Llvm.build_store rhs lhs builder)
+  | Ast.Block block -> codegen_block block
+  | Ast.SFuncCall func_call -> ignore (codegen_func_call func_call)
+  | Ast.If (cond, stmt1_o, stmt2_o) ->
+      let cond = codegen_cond cond in
+      let icmp_ne = Llvm.build_icmp Llvm.Icmp.Ne cond (c32 0) "if" builder in
+      let func = Llvm.block_parent (Llvm.insertion_block builder) in
+      let then_block = Llvm.append_block context "then" func in
+      let else_block = Llvm.append_block context "else" func in
+      let merge_block = Llvm.append_block context "merge" func in
+      let _ = Llvm.build_cond_br icmp_ne then_block else_block builder in
+      Llvm.position_at_end then_block builder;
+      codegen_stmt (Option.get stmt1_o);
+      (* will never be None *)
+      let _ = Llvm.build_br merge_block builder in
+      Llvm.position_at_end else_block builder;
+      if Option.is_some stmt2_o then codegen_stmt (Option.get stmt2_o);
+      let _ = Llvm.build_br merge_block builder in
+      Llvm.position_at_end merge_block builder
+  | Ast.While (cond, stmt) ->
+      let func = Llvm.block_parent (Llvm.insertion_block builder) in
+      let cond_block = Llvm.append_block context "cond" func in
+      let body_block = Llvm.append_block context "body" func in
+      let merge_block = Llvm.append_block context "merge" func in
+      let _ = Llvm.build_br cond_block builder in
+      Llvm.position_at_end cond_block builder;
+      let cond = codegen_cond cond in
+      let _ = Llvm.build_cond_br cond body_block merge_block builder in
+      Llvm.position_at_end body_block builder;
+      codegen_stmt stmt;
+      let _ = Llvm.build_br cond_block builder in
+      Llvm.position_at_end merge_block builder
+  | Ast.Return { expr_o; _ } -> (
+      match expr_o with
+      | Some expr ->
+          let ret_val = codegen_expr expr in
+          ignore (Llvm.build_ret ret_val builder)
+      | None -> ignore (Llvm.build_ret_void builder))
+(* !! Ask Dimitris about this
+   | None ->
+   let bt = Llvm.block_terminator (Llvm.insertion_block builder) in
+   (
+     match bt with
+     | Some _ -> ()
+     | None -> Llvm.build_ret_void builder |> ignore
+   )
+*)
+
+let codegen_func_decl (func : Ast.func) =
+  let ret_lltype = type_to_lltype func.type_t in
+  let param_lltypes = Array.of_list (List.map param_def_lltype func.params) in
+  let func_lltype = Llvm.function_type ret_lltype param_lltypes in
+  match Llvm.lookup_function func.id the_module with
+  | Some decl -> decl
+  | None -> Llvm.declare_function func.id func_lltype the_module
+
+(* !! Copilot generated this, I haven't checked it *)
+let rec codegen_func_def (func : Ast.func) =
+  let func_decl = codegen_func_decl func in
+  let func_type = Llvm.type_of func_decl in
+  let func_name = Llvm.value_name func_decl in
+  let llfunc = Llvm.define_function func_name func_type the_module in
+  let entry_block = Llvm.append_block context "entry" llfunc in
+  Llvm.position_at_end entry_block builder;
+  List.iter codegen_param_def func.params;
+  codegen_block (Option.get func.body);
+  let _ = Llvm.build_ret_void builder in
+  Llvm_analysis.assert_valid_function llfunc;
+  llfunc
+
+and codegen_local_def (local_def : Ast.local_def) =
+  match local_def with
+  | Ast.VarDef var_def -> codegen_var_def var_def
+  | Ast.FuncDecl func_decl -> codegen_func_decl func_decl
+  | Ast.FuncDef func_def -> codegen_func_def func_def
+
+let codegen_program (MainFunc main_func : Ast.program) =
+  codegen_func_def main_func
