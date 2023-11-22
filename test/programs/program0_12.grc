@@ -16,8 +16,6 @@ fun main(): nothing
   {
     aux_inner(f); $ use variable f
   }
-  var x, z : char;
-  var mlton : int;
 {
-  aux(1); $ wah
+  $aux(1); $ wah
 }
