@@ -189,14 +189,16 @@ let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
           | Variable vdr ->
               let vd = !vdr in
               l_val_id.type_t <- vd.type_t;
-              l_val_id.pass_by <- Value;
+              l_val_id.passed_by <- Value;
+              l_val_id.id_type <- Var vdr;
               l_val_id.frame_offset <- vd.frame_offset;
               l_val_id.parent_path <- vd.parent_path;
               (l_val_id.loc, l_val_id.type_t)
           | Parameter pdr ->
               let pd = !pdr in
               l_val_id.type_t <- pd.type_t;
-              l_val_id.pass_by <- pd.pass_by;
+              l_val_id.passed_by <- pd.pass_by;
+              l_val_id.id_type <- Param pdr;
               l_val_id.frame_offset <- pd.frame_offset;
               l_val_id.parent_path <- pd.parent_path;
               (l_val_id.loc, l_val_id.type_t)

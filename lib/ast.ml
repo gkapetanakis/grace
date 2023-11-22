@@ -35,10 +35,16 @@ type param_def = {
   loc : loc;
 }
 
+type id_type =
+  | NoType
+  | Var of var_def ref
+  | Param of param_def ref
+
 type l_value_id = {
   id : string;
   mutable type_t : data_type;
-  mutable pass_by : pass_by;
+  mutable passed_by : pass_by;
+  mutable id_type : id_type;
   mutable frame_offset : int;
   mutable parent_path : string list;
   loc : loc;

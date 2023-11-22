@@ -131,8 +131,8 @@ let rec gen_l_value frame caller_path (l_val : Ast.l_value) =
       (* ?? might need a 0 index at the start of the array... ?? *)
       let idx =
         match l_v with
-        | Ast.Id { pass_by; _ } -> (
-            match pass_by with Ast.Reference -> [] | Ast.Value -> [ c32 0 ])
+        | Ast.Id { passed_by; _ } -> (
+            match passed_by with Ast.Reference -> [] | Ast.Value -> [ c32 0 ])
         | Ast.LString _ -> []
         | _ -> raise (Error.Codegen_error "gen_l_value: Implementation error")
       in
@@ -148,13 +148,13 @@ let rec gen_l_value frame caller_path (l_val : Ast.l_value) =
       res
 
 and gen_lval_id frame caller_path (l_val_id : Ast.l_value_id) =
-  let Ast.{ id; pass_by; frame_offset; parent_path; _ } = l_val_id in
+  let Ast.{ id; passed_by; frame_offset; parent_path; _ } = l_val_id in
   let hops = List.length caller_path - List.length parent_path in
   let frame_ptr = get_frame_ptr frame hops in
   let element_ptr =
     Llvm.build_struct_gep frame_ptr frame_offset "element_ptr" builder
   in
-  match pass_by with
+  match passed_by with
   | Ast.Reference -> Llvm.build_load element_ptr id builder
   | Ast.Value -> element_ptr
 
