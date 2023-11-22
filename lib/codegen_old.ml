@@ -52,6 +52,51 @@ let param_def_lltype (pd : Ast.param_def) =
           Llvm.pointer_type (type_to_lltype (Ast.Array (t, tl)))
       | _ -> Llvm.pointer_type (type_to_lltype pd.type_t))
 
+(*
+  // grace code
+  fun f(a: int): nothing
+    var b: char[5];
+    var c: int;
+    fun g(): nothing
+    {}
+    fun h(): nothing
+    {
+      g();
+    }
+  {
+  }
+
+  // llvm representation (kind of)
+  struct frame__f {
+    void* parent;
+    int a;
+    char b[5];
+    int c;
+  }
+
+  struct frame__f_g {
+    frame__f* parent;
+  }
+
+  struct frame__f_h {
+    frame__f* parent;
+  }
+
+  // llvm code (high level)
+  fun func__f(ref x: frame__f): nothing
+  {
+  }
+
+  fun func__f_g(ref x: frame__f_g): nothing
+  {
+  }
+
+  fun func__f_h(ref x: frame__f_h): nothing
+  {
+    func__f_g(x.parent);
+  }
+*)
+
 let get_parent_name (func : Ast.func) =
   String.concat "." (List.rev func.parent_path)
 
@@ -102,73 +147,59 @@ let gen_all_frame_types (Ast.MainFunc main_func : Ast.program) =
   in
   aux main_func
 
-let rec get_frame_ptr fr_ptr hops =
-  match hops with
-  | 0 -> fr_ptr
-  | hops ->
-    let link_ptr = Llvm.build_struct_gep fr_ptr 0 "link_ptr" builder in
-    let link = Llvm.build_load link_ptr "link" builder in
-    get_frame_ptr link (hops - 1)
+let codegen_var_def (var_def : Ast.var_def) =
+  let var_name = var_def.id in
+  let var_type = var_def_lltype var_def in
+  let var = Llvm.build_alloca var_type var_name builder in
+  Hashtbl.add named_values var_name var;
+  var
 
-let rec gen_l_value frame caller_path (l_val : Ast.l_value) =
-  match l_val with
-  | Ast.Id l_val_id -> gen_lval_id frame caller_path l_val_id
-  | Ast.LString Ast.{id;_} ->
-    let str = Llvm.build_global_string id id builder in
-    Llvm.build_struct_gep str 0 "str_char_ptr" builder
-  | Ast.ArrayAccess (l_val, e_l) ->
-    let l_val_ptr = gen_l_value frame caller_path l_val in
-    let e_l_val = List.map (gen_expr frame caller_path) e_l in
-    (* ?? might need a 0 index at the start of the array... ?? *)
-    let e_l_val = c32 0 :: e_l_val in
-    let e_l_val = Array.of_list e_l_val in
-    Llvm.build_gep l_val_ptr e_l_val "array_access" builder
+let codegen_param_def (param_def : Ast.param_def) =
+  let param_name = param_def.id in
+  let param_type = param_def_lltype param_def in
+  let param = Llvm.build_alloca param_type param_name builder in
+  Hashtbl.add named_values param_name param
 
-and gen_lval_id frame caller_path (l_val_id : Ast.l_value_id) =
-  let Ast.{id; pass_by; frame_offset; parent_path;_} = l_val_id in
-  let hops = List.length caller_path - List.length parent_path in
-  let frame_ptr = get_frame_ptr frame hops in
-  let element_ptr = Llvm.build_struct_gep frame_ptr frame_offset "element_ptr" builder in
-  match pass_by with
-  | Ast.Reference -> Llvm.build_load element_ptr id builder
-  | Ast.Value -> element_ptr
+let rec codegen_l_value (l_value : Ast.l_value) =
+  match l_value with
+  | Ast.Id { id; _ } ->
+      let var = Hashtbl.find named_values id in
+      Llvm.build_load var id builder
+  | Ast.LString { id; _ } -> (
+      match Llvm.lookup_global id the_module with
+      | Some ptr -> ptr
+      | None ->
+          Llvm.build_global_string id id builder
+          (* build load also in expr ?!?*))
+  | _ -> raise (Failure "Not implemented")
+(* | Ast.ArrayAccess (l_value, expr_list) -> *)
 
-and gen_func_arg frame caller_path ((e, pb): Ast.expr * Ast.pass_by) =
-  match pb with
-  | Ast.Value -> gen_expr frame caller_path e
-  | Ast.Reference -> (
-    let l_v = match e with
-    | Ast.LValue l_v -> l_v
-    | _ -> raise (Failure "Cannot pass by reference a non-lvalue")
-    in gen_l_value frame caller_path l_v
-)
-
-and gen_func_call frame caller_path (func_call : Ast.func_call) =
-  let func_decl = 
+and codegen_func_call (func_call : Ast.func_call) =
+  let func_decl =
     match Llvm.lookup_function func_call.id the_module with
-    | Some func_decl -> func_decl
-    | None -> raise (Failure ("Function declaration not found: " ^ func_call.id))
+    | Some decl -> decl
+    | None ->
+        raise (Failure ("Function declaration not found: " ^ func_call.id))
   in
-  let func_args = List.map (gen_func_arg frame caller_path) func_call.args in
-  let hops = List.length caller_path - List.length func_call.callee_path in
-  let frame_ptr = get_frame_ptr frame hops in
-  let func_args = frame_ptr :: func_args in
-  Llvm.build_call func_decl (Array.of_list func_args) ("func_call_" ^ func_call.id) builder 
+  let args =
+    Array.of_list (List.map codegen_expr (List.map fst func_call.args))
+  in
+  Llvm.build_call func_decl args "func_call" builder
 
-and gen_expr frame caller_path (e : Ast.expr) =
-  match e with
+and codegen_expr (expr : Ast.expr) =
+  match expr with
   | Ast.LitInt { lit_int; _ } -> c32 lit_int
   | Ast.LitChar { lit_char; _ } -> c8 (Char.code lit_char)
-  | Ast.LValue l_value -> gen_l_value frame caller_path l_value
-  | Ast.EFuncCall fc -> gen_func_call frame caller_path fc
+  | Ast.LValue l_value -> codegen_l_value l_value
+  | Ast.EFuncCall func_call -> codegen_func_call func_call
   | Ast.UnAritOp (op, expr) -> (
-      let rhs = gen_expr frame caller_path expr in
+      let rhs = codegen_expr expr in
       match op with
       | Ast.Pos -> rhs
       | Ast.Neg -> Llvm.build_neg rhs "neg" builder)
   | Ast.BinAritOp (expr1, op, expr2) -> (
-      let lhs = gen_expr frame caller_path expr1 in
-      let rhs = gen_expr frame caller_path expr2 in
+      let lhs = codegen_expr expr1 in
+      let rhs = codegen_expr expr2 in
       match op with
       | Ast.Add -> Llvm.build_add lhs rhs "add" builder
       | Ast.Sub -> Llvm.build_sub lhs rhs "sub" builder
@@ -176,15 +207,15 @@ and gen_expr frame caller_path (e : Ast.expr) =
       | Ast.Div -> Llvm.build_sdiv lhs rhs "div" builder
       | Ast.Mod -> Llvm.build_srem lhs rhs "mod" builder)
 
-let rec gen_cond frame caller_path (cond : Ast.cond) =
+let rec codegen_cond (cond : Ast.cond) =
   match cond with
   | Ast.UnLogicOp (op, cond) -> (
       match op with
       | Ast.Not ->
-          let rhs = gen_cond frame caller_path cond in
+          let rhs = codegen_cond cond in
           Llvm.build_not rhs "not" builder)
   | Ast.BinLogicOp (cond1, op, cond2) ->
-      let lhs = gen_cond frame caller_path cond1 in
+      let lhs = codegen_cond cond1 in
       let lhs_block = Llvm.insertion_block builder in
       let func = Llvm.block_parent lhs_block in
       let rhs_block = Llvm.append_block context "rhs" func in
@@ -195,13 +226,13 @@ let rec gen_cond frame caller_path (cond : Ast.cond) =
         | Ast.Or -> Llvm.build_cond_br lhs merge_block rhs_block builder
       in
       Llvm.position_at_end rhs_block builder;
-      let rhs = gen_cond frame caller_path cond2 in
+      let rhs = codegen_cond cond2 in
       let _ = Llvm.build_br merge_block builder in
       Llvm.position_at_end merge_block builder;
       Llvm.build_phi [ (lhs, lhs_block); (rhs, rhs_block) ] "phi" builder
   | Ast.CompOp (expr1, op, expr2) -> (
-      let lhs = gen_expr frame caller_path expr1 in
-      let rhs = gen_expr frame caller_path expr2 in
+      let lhs = codegen_expr expr1 in
+      let rhs = codegen_expr expr2 in
       match op with
       | Ast.Eq -> Llvm.build_icmp Llvm.Icmp.Eq lhs rhs "eq" builder
       | Ast.Neq -> Llvm.build_icmp Llvm.Icmp.Ne lhs rhs "neq" builder
@@ -210,104 +241,89 @@ let rec gen_cond frame caller_path (cond : Ast.cond) =
       | Ast.Geq -> Llvm.build_icmp Llvm.Icmp.Sge lhs rhs "geq" builder
       | Ast.Leq -> Llvm.build_icmp Llvm.Icmp.Sle lhs rhs "leq" builder)
 
-let rec codegen_block frame caller_path (stmts : Ast.block) =
-  List.iter (gen_stmt frame caller_path) stmts
+let rec codegen_block (stmts : Ast.block) = List.iter codegen_stmt stmts
 
-and gen_stmt frame caller_path (stmt : Ast.stmt) =
+and codegen_stmt (stmt : Ast.stmt) =
   match stmt with
   | Ast.Empty -> ()
-  | Ast.Assign (l_val, expr) ->
-    let rhs = gen_expr frame caller_path expr in
-    let l_val_ptr = gen_l_value frame caller_path l_val in
-    ignore (Llvm.build_store rhs l_val_ptr builder)
-  | Ast.Block block -> codegen_block frame caller_path block
-  | Ast.SFuncCall func_call -> ignore (gen_func_call frame caller_path func_call)
+  | Ast.Assign (l_value, expr) ->
+      let lhs = codegen_l_value l_value in
+      let rhs = codegen_expr expr in
+      ignore (Llvm.build_store rhs lhs builder)
+  | Ast.Block block -> codegen_block block
+  | Ast.SFuncCall func_call -> ignore (codegen_func_call func_call)
   | Ast.If (cond, stmt1_o, stmt2_o) ->
-    let cond = gen_cond frame caller_path cond in
-    let icmp_ne = Llvm.build_icmp Llvm.Icmp.Ne cond (c32 0) "if" builder in
-    let func = Llvm.block_parent (Llvm.insertion_block builder) in
-    let then_block = Llvm.append_block context "then" func in
-    let else_block = Llvm.append_block context "else" func in
-    let merge_block = Llvm.append_block context "merge" func in
-    let _ = Llvm.build_cond_br icmp_ne then_block else_block builder in
-    Llvm.position_at_end then_block builder;
-    gen_stmt frame caller_path (Option.get stmt1_o);
-    (* will never be None *)
-    let _ = Llvm.build_br merge_block builder in
-    Llvm.position_at_end else_block builder;
-    if Option.is_some stmt2_o then gen_stmt frame caller_path (Option.get stmt2_o);
-    let _ = Llvm.build_br merge_block builder in
-    Llvm.position_at_end merge_block builder
+      let cond = codegen_cond cond in
+      let icmp_ne = Llvm.build_icmp Llvm.Icmp.Ne cond (c32 0) "if" builder in
+      let func = Llvm.block_parent (Llvm.insertion_block builder) in
+      let then_block = Llvm.append_block context "then" func in
+      let else_block = Llvm.append_block context "else" func in
+      let merge_block = Llvm.append_block context "merge" func in
+      let _ = Llvm.build_cond_br icmp_ne then_block else_block builder in
+      Llvm.position_at_end then_block builder;
+      codegen_stmt (Option.get stmt1_o);
+      (* will never be None *)
+      let _ = Llvm.build_br merge_block builder in
+      Llvm.position_at_end else_block builder;
+      if Option.is_some stmt2_o then codegen_stmt (Option.get stmt2_o);
+      let _ = Llvm.build_br merge_block builder in
+      Llvm.position_at_end merge_block builder
   | Ast.While (cond, stmt) ->
-    let func = Llvm.block_parent (Llvm.insertion_block builder) in
-    let cond_block = Llvm.append_block context "cond" func in
-    let body_block = Llvm.append_block context "body" func in
-    let merge_block = Llvm.append_block context "merge" func in
-    let _ = Llvm.build_br cond_block builder in
-    Llvm.position_at_end cond_block builder;
-    let cond = gen_cond frame caller_path cond in
-    let _ = Llvm.build_cond_br cond body_block merge_block builder in
-    Llvm.position_at_end body_block builder;
-    gen_stmt frame caller_path stmt;
-    let _ = Llvm.build_br cond_block builder in
-    Llvm.position_at_end merge_block builder
-  | Return Ast.{expr_o;_} ->
-    match expr_o with
-    | None -> ignore (Llvm.build_ret_void builder)
-    | Some expr ->
-      let ret_val = gen_expr frame caller_path expr in
-      ignore (Llvm.build_ret ret_val builder)
-
-let gen_func_def (Ast.func) = () (* ΤΑ ΛΙΓΟΥΡΕΥΕΣΤΕ? *)
-
-
-
-
-
-
-
-
-(*
-  // grace code
-  fun f(a: int): nothing
-    var b: char[5];
-    var c: int;
-    fun g(): nothing
-    {}
-    fun h(): nothing
-    {
-      g();
-    }
-  {
-  }
-
-  // llvm representation (kind of)
-  struct frame__f {
-    void* parent;
-    int a;
-    char b[5];
-    int c;
-  }
-
-  struct frame__f_g {
-    frame__f* parent;
-  }
-
-  struct frame__f_h {
-    frame__f* parent;
-  }
-
-  // llvm code (high level)
-  fun func__f(ref x: frame__f): nothing
-  {
-  }
-
-  fun func__f_g(ref x: frame__f_g): nothing
-  {
-  }
-
-  fun func__f_h(ref x: frame__f_h): nothing
-  {
-    func__f_g(x.parent);
-  }
+      let func = Llvm.block_parent (Llvm.insertion_block builder) in
+      let cond_block = Llvm.append_block context "cond" func in
+      let body_block = Llvm.append_block context "body" func in
+      let merge_block = Llvm.append_block context "merge" func in
+      let _ = Llvm.build_br cond_block builder in
+      Llvm.position_at_end cond_block builder;
+      let cond = codegen_cond cond in
+      let _ = Llvm.build_cond_br cond body_block merge_block builder in
+      Llvm.position_at_end body_block builder;
+      codegen_stmt stmt;
+      let _ = Llvm.build_br cond_block builder in
+      Llvm.position_at_end merge_block builder
+  | Ast.Return { expr_o; _ } -> (
+      match expr_o with
+      | Some expr ->
+          let ret_val = codegen_expr expr in
+          ignore (Llvm.build_ret ret_val builder)
+      | None -> ignore (Llvm.build_ret_void builder))
+(* !! Ask Dimitris about this
+   | None ->
+   let bt = Llvm.block_terminator (Llvm.insertion_block builder) in
+   (
+     match bt with
+     | Some _ -> ()
+     | None -> Llvm.build_ret_void builder |> ignore
+   )
 *)
+
+let codegen_func_decl (func : Ast.func) =
+  let ret_lltype = type_to_lltype func.type_t in
+  let param_lltypes = Array.of_list (List.map param_def_lltype func.params) in
+  let func_lltype = Llvm.function_type ret_lltype param_lltypes in
+  match Llvm.lookup_function func.id the_module with
+  | Some decl -> decl
+  | None -> Llvm.declare_function func.id func_lltype the_module
+
+(* !! Copilot generated this, I haven't checked it *)
+let rec codegen_func_def (func : Ast.func) =
+  let func_decl = codegen_func_decl func in
+  let func_type = Llvm.type_of func_decl in
+  let func_name = Llvm.value_name func_decl in
+  let llfunc = Llvm.define_function func_name func_type the_module in
+  let entry_block = Llvm.append_block context "entry" llfunc in
+  Llvm.position_at_end entry_block builder;
+  List.iter codegen_param_def func.params;
+  codegen_block (Option.get func.body);
+  let _ = Llvm.build_ret_void builder in
+  Llvm_analysis.assert_valid_function llfunc;
+  llfunc
+
+and codegen_local_def (local_def : Ast.local_def) =
+  match local_def with
+  | Ast.VarDef var_def -> codegen_var_def var_def
+  | Ast.FuncDecl func_decl -> codegen_func_decl func_decl
+  | Ast.FuncDef func_def -> codegen_func_def func_def
+
+let codegen_program (MainFunc main_func : Ast.program) =
+  codegen_func_def main_func
