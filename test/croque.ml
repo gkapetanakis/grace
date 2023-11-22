@@ -24,14 +24,13 @@ let () =
     try
       (*print_endline filename;*)
       let ast_node = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
-      Grace_lib.Codegen.irgen ast_node;
-
+      Grace_lib.Codegen.irgen ast_node
       (*List.iter
-      (fun named_type ->
-        print_endline (Llvm.string_of_lltype (Llvm.element_type named_type)))
-      (Grace_lib.Codegen.get_all_frame_type_ptrs ast_node);
+        (fun named_type ->
+          print_endline (Llvm.string_of_lltype (Llvm.element_type named_type)))
+        (Grace_lib.Codegen.get_all_frame_type_ptrs ast_node);
 
-      print_string "\n====================\n\n"*)
+        print_string "\n====================\n\n"*)
     with
     | Grace_lib.Error.Lexing_error (loc, msg) ->
         Grace_lib.Error.pr_lexing_error (loc, msg);

@@ -1,7 +1,7 @@
 (library
  (name grace_lib)
  ;; (modules (:standard \ codegen))
- (libraries llvm llvm.analysis llvm.all_backends llvm.target))
+ (libraries llvm llvm.all_backends llvm.analysis llvm.target))
 
 (ocamllex
  (modules lexer))

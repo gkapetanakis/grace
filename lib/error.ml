@@ -3,6 +3,7 @@ type loc = Lexing.position * Lexing.position
 exception Lexing_error of loc * string
 exception Semantic_error of loc * string
 exception Symbol_table_error of loc * string
+exception Codegen_error of string
 
 let string_of_loc
     ( {
@@ -18,11 +19,13 @@ let string_of_loc
 let pr_lexing_error (loc, msg) =
   prerr_endline ("Lexing error at " ^ string_of_loc loc ^ ": " ^ msg)
 
+let pr_parser_error (loc, msg) =
+  prerr_endline ("Parser error at " ^ string_of_loc loc ^ ": " ^ msg)
+
 let pr_semantic_error (loc, msg) =
   prerr_endline ("Semantic error at " ^ string_of_loc loc ^ ": " ^ msg)
 
 let pr_symbol_table_error (loc, msg) =
   prerr_endline ("Symbol table error at " ^ string_of_loc loc ^ ": " ^ msg)
 
-let pr_parser_error (loc, msg) =
-  prerr_endline ("Parser error at " ^ string_of_loc loc ^ ": " ^ msg)
+let pr_codegen_error msg = prerr_endline ("Codegen error " ^ msg)
