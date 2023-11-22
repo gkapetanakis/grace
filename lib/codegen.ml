@@ -110,20 +110,20 @@ let get_parent_frame_type_ptr (func : Ast.func) =
   | Some frame -> Llvm.pointer_type frame
   | None -> Llvm.pointer_type void_t
 
-let get_frame_type (func : Ast.func) =
+let get_frame_type_ptr (func : Ast.func) =
   let frame_name = get_frame_name func in
   match Llvm.type_by_name the_module frame_name with
   | Some frame -> Llvm.pointer_type frame
   | None -> raise (Failure ("Frame type not found: " ^ frame_name))
 
-let get_all_frame_types (Ast.MainFunc main_func : Ast.program) =
+let get_all_frame_type_ptrs (Ast.MainFunc main_func : Ast.program) =
   let rec aux (acc : Llvm.lltype list) (funcs : Ast.func list list) =
     match funcs with
     | [] -> List.rev acc
     | [] :: tl -> aux acc tl
     | (hd :: tl1) :: tl2 ->
         let _, _, local_func_defs = Ast.reorganize_local_defs hd.local_defs in
-        aux (get_frame_type hd :: acc) (local_func_defs :: tl1 :: tl2)
+        aux (get_frame_type_ptr hd :: acc) (local_func_defs :: tl1 :: tl2)
   in
   aux [] [ [ main_func ] ]
 

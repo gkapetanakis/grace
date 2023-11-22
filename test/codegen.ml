@@ -28,7 +28,7 @@ let () =
       List.iter
         (fun named_type ->
           print_endline (Llvm.string_of_lltype (Llvm.element_type named_type)))
-        (Grace_lib.Codegen.get_all_frame_types ast_node);
+        (Grace_lib.Codegen.get_all_frame_type_ptrs ast_node);
 
       print_string "\n====================\n\n"
     with
