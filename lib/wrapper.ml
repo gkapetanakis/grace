@@ -65,8 +65,6 @@ let wrap_l_value_id loc id exprs sym_tbl =
       (* will be changed by sem_l_value *)
       passed_by = Value;
       (* will be changed by sem_l_value *)
-      id_type = NoType;
-      (* will be changed by sem_l_value *)
       frame_offset = -1;
       (* will be changed by sem_l_value *)
       parent_path = [];

@@ -44,7 +44,6 @@ type l_value_id = {
   id : string;
   mutable type_t : data_type;
   mutable passed_by : pass_by;
-  mutable id_type : id_type;
   mutable frame_offset : int;
   mutable parent_path : string list;
   loc : loc;

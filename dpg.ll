@@ -1,4 +1,3 @@
-Hello
 ; ModuleID = 'grace'
 source_filename = "grace"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -28,8 +27,8 @@ entry:
   %param_ptr = getelementptr inbounds %frame__global.main, %frame__global.main* %frame_struct, i32 0, i32 0
   store void* %0, void** %param_ptr, align 8
   %element_ptr = getelementptr inbounds %frame__global.main, %frame__global.main* %frame_struct, i32 0, i32 1
-  %ref_ptr = getelementptr inbounds [2 x i32], [2 x i32]* %element_ptr, i32 0, i32 0
-  call void @func__global.main.g(%frame__global.main* %frame_struct, i32* %ref_ptr)
+  %array_ptr = getelementptr [2 x i32], [2 x i32]* %element_ptr, i32 0, i32 0
+  call void @func__global.main.g(%frame__global.main* %frame_struct, i32* %array_ptr)
   ret void
 }
 

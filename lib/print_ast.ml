@@ -63,7 +63,7 @@ let pr_param_def off enable (pd : param_def) =
 
 let rec pr_l_value off enable (lv : l_value) =
   match lv with
-  | Id { id; type_t; passed_by; frame_offset; parent_path; id_type;_ } ->
+  | Id { id; type_t; passed_by; frame_offset; parent_path;_ } ->
       let str =
         off ^ "id("
         ^ (if passed_by = Reference then "passed by ref " else "")
@@ -72,7 +72,6 @@ let rec pr_l_value off enable (lv : l_value) =
         ^ "): ["
         ^ String.concat "_" (List.rev parent_path)
         ^ "]" ^ " offset: " ^ string_of_int frame_offset
-        ^ (match id_type with Var _ -> " var" | Param _ -> " param" | _ -> "")
       in
       pr_enable str enable
   | LString { id; type_t; _ } ->
