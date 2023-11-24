@@ -35,11 +35,6 @@ type param_def = {
   loc : loc;
 }
 
-type id_type =
-  | NoType
-  | Var of var_def ref
-  | Param of param_def ref
-
 type l_value_id = {
   id : string;
   mutable type_t : data_type;
