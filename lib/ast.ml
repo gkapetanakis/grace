@@ -1,20 +1,17 @@
-type loc = Lexing.position * Lexing.position
-type data_type = Int | Char | Nothing | Array of data_type * int option list
+type loc = Error.loc
 
-type data_type_rec =
-  | RInt
-  | RChar
-  | RNothing
-  | RArray of data_type_rec * int option
+type scalar = Int | Char | Nothing
+type data_type = Scalar of scalar | Array of scalar * int option list
 
 type un_arit_op = Pos | Neg
 type bin_arit_op = Add | Sub | Mul | Div | Mod
 type un_logic_op = Not
 type bin_logic_op = And | Or
 type comp_op = Eq | Neq | Gt | Lt | Geq | Leq
+
 type var_type = data_type
 type param_type = data_type
-type ret_type = data_type
+type ret_type = scalar
 type pass_by = Value | Reference
 type func_status = Defined | Declared
 
@@ -23,6 +20,7 @@ type var_def = {
   type_t : var_type;
   frame_offset : int;
   parent_path : string list;
+  (* depth : int; *)
   loc : loc;
 }
 
@@ -32,6 +30,7 @@ type param_def = {
   pass_by : pass_by;
   mutable frame_offset : int;
   mutable parent_path : string list;
+  (* mutable depth : int; *)
   loc : loc;
 }
 
@@ -41,28 +40,44 @@ type l_value_id = {
   mutable passed_by : pass_by;
   mutable frame_offset : int;
   mutable parent_path : string list;
+  (* mutable depth : int; *)
   loc : loc;
 }
 
-type l_value_lstring = { id : string; type_t : data_type; loc : loc }
+type l_value_lstring = {
+  id : string;
+  type_t : data_type;
+  loc : loc;
+}
 
-type l_value =
+type l_value_array_access = {
+  simple_l_value : simple_l_value;
+  exprs : expr list;
+  loc : loc;
+}
+
+and simple_l_value =
   | Id of l_value_id
   | LString of l_value_lstring
-  | ArrayAccess of l_value * expr list
+
+and l_value =
+  | Simple of simple_l_value
+  | ArrayAccess of l_value_array_access
 
 and func_call = {
   id : string;
   mutable args : (expr * pass_by) list;
   mutable type_t : ret_type;
   mutable callee_path : string list;
+  (* mutable callee_depth : int; *)
   caller_path : string list;
+  (* caller_depth : int; *)
   loc : loc;
 }
 
 and expr =
-  | LitInt of { lit_int : int; loc : loc }
-  | LitChar of { lit_char : char; loc : loc }
+  | LitInt of { value : int; loc : loc }
+  | LitChar of { value : char; loc : loc }
   | LValue of l_value
   | EFuncCall of func_call
   | UnAritOp of un_arit_op * expr
@@ -73,10 +88,13 @@ type cond =
   | BinLogicOp of cond * bin_logic_op * cond
   | CompOp of expr * comp_op * expr
 
-type block = stmt list
+type block = {
+  stmts : stmt list;
+  loc : loc;
+}
 
 and stmt =
-  | Empty
+  | Empty of loc
   | Assign of l_value * expr
   | Block of block
   | SFuncCall of func_call
@@ -92,6 +110,7 @@ type func = {
   mutable body : block option;
   loc : loc;
   parent_path : string list;
+  (*depth : int; *)
   status : func_status;
 }
 
@@ -99,19 +118,58 @@ and local_def = VarDef of var_def | FuncDecl of func | FuncDef of func
 
 type program = MainFunc of func
 
-let create_var_type dt dims =
-  match dims with [] -> dt | _ -> Array (dt, List.map (fun x -> Some x) dims)
+let get_loc_simple_l_value = function
+  | Id id -> id.loc
+  | LString lstring -> lstring.loc  
+
+let get_loc_l_value = function
+  | Simple simple_l_value -> get_loc_simple_l_value simple_l_value
+  | ArrayAccess array_access -> array_access.loc
+
+let rec get_loc_expr = function
+  | LitInt lit_int -> lit_int.loc
+  | LitChar lit_char -> lit_char.loc
+  | LValue l_value -> get_loc_l_value l_value
+  | EFuncCall func_call -> func_call.loc
+  | UnAritOp (_, expr) -> get_loc_expr expr
+  | BinAritOp (expr1, _, _) -> get_loc_expr expr1
+
+let rec get_loc_cond = function
+  | UnLogicOp (_, cond) -> get_loc_cond cond
+  | BinLogicOp (cond1, _, _) -> get_loc_cond cond1
+  | CompOp (expr1, _, _) -> get_loc_expr expr1
+
+let get_loc_stmt = function
+  | Empty loc -> loc
+  | Assign (l_value, _) -> get_loc_l_value l_value
+  | Block block -> block.loc
+  | SFuncCall func_call -> func_call.loc
+  | If (cond, _, _) -> get_loc_cond cond
+  | While (cond, _) -> get_loc_cond cond
+  | Return { loc; _} -> loc
+
+let get_loc_local_def = function
+  | VarDef var_def -> var_def.loc
+  | FuncDecl func -> func.loc
+  | FuncDef func -> func.loc
+
+let get_loc_program = function
+  | MainFunc func -> func.loc
+
+  let create_var_type dt dims =
+    match dims with [] -> Scalar dt | _ -> Array (dt, List.map (fun x -> Some x) dims)
 
 let create_param_type dt dims flexible =
   match (dims, flexible) with
-  | [], false -> dt
+  | [], false -> Scalar dt
   | (_ :: _ as dims), false -> Array (dt, List.map (fun x -> Some x) dims)
   | dims, true -> Array (dt, None :: List.map (fun x -> Some x) dims)
 
-let rec l_string_dependence = function
-  | Id _ -> false
-  | LString _ -> true
-  | ArrayAccess (lv, _) -> l_string_dependence lv
+let l_string_dependence l_v = 
+  let aux = function Id _ -> false | LString _ -> true in
+  match l_v with
+  | Simple simple_l_value -> aux simple_l_value
+  | ArrayAccess { simple_l_value; _ } -> aux simple_l_value
 
 let reorganize_local_defs (local_defs : local_def list) =
   let rec reorganize_local_defs' (local_defs : local_def list)
@@ -128,23 +186,19 @@ let reorganize_local_defs (local_defs : local_def list) =
   let vars, decls, funcs = reorganize_local_defs' local_defs [] [] [] in
   (List.rev vars, List.rev decls, List.rev funcs)
 
-let rec data_type_to_rec = function
-  | Int -> RInt
-  | Char -> RChar
-  | Nothing -> RNothing
-  | Array (dt, dims) ->
-      let rec aux dt dims =
-        match dims with
-        | [] -> data_type_to_rec dt
-        | dim :: dims -> RArray (aux dt dims, dim)
-      in
-      aux dt dims
+  let get_parent_name (func : func) =
+    String.concat "." (List.rev func.parent_path)
+  
+let get_func_name (func : func) = get_parent_name func ^ "." ^ func.id
+let get_parent_frame_name (func : func) = "frame__" ^ get_parent_name func
+let get_frame_name (func : func) = "frame__" ^ get_func_name func
 
-let rec rec_data_type_to_normal = function
-  | RInt -> Int
-  | RChar -> Char
-  | RNothing -> Nothing
-  | RArray (dt, dim) -> (
-      match rec_data_type_to_normal dt with
-      | Array (dt, dims) -> Array (dt, dim :: dims)
-      | dt -> Array (dt, [ dim ]))
+let get_proper_parent_func_name (func : func) =
+  "func__" ^ get_parent_name func
+
+let get_proper_func_name (func : func) = "func__" ^ get_func_name func
+
+let get_proper_func_call_name (func_call : func_call) =
+  "func__"
+  ^ String.concat "." (List.rev func_call.callee_path)
+  ^ "." ^ func_call.id

@@ -3,16 +3,19 @@ open Ast
 let sep, endl = ("--", "\n")
 let pr_enable str enable = if enable then str ^ endl else str
 
-let rec pr_data_type off enable = function
+let pr_scalar_type off enable = function
   | Int -> pr_enable (off ^ "int") enable
   | Char -> pr_enable (off ^ "char") enable
   | Nothing -> pr_enable (off ^ "nothing") enable
+
+let pr_data_type off enable = function
+  | Scalar t -> pr_scalar_type off enable t
   | Array (t, dims) ->
       let extract_or_none d =
         match d with Some d -> string_of_int d | None -> ""
       in
       let dims = List.map (fun d -> "[" ^ extract_or_none d ^ "]") dims in
-      pr_enable (off ^ pr_data_type "" false t ^ String.concat "" dims) enable
+      pr_enable (off ^ pr_scalar_type "" false t ^ String.concat "" dims) enable
 
 let pr_un_arit_op off enable = function
   | Pos -> pr_enable (off ^ "pos") enable
@@ -61,27 +64,31 @@ let pr_param_def off enable (pd : param_def) =
   in
   pr_enable str enable
 
+let pr_simple_l_value off enable (slv : simple_l_value) =
+  match slv with
+  | Id { id; type_t; passed_by; frame_offset; parent_path;_ } ->
+    let str =
+      off ^ "id("
+      ^ (if passed_by = Reference then "passed by ref " else "")
+      ^ id ^ " : "
+      ^ pr_data_type "" false type_t
+      ^ "): ["
+      ^ String.concat "_" (List.rev parent_path)
+      ^ "]" ^ " offset: " ^ string_of_int frame_offset
+    in
+    pr_enable str enable
+| LString { id; type_t; _ } ->
+    let str =
+      off ^ "l_string(" ^ id ^ " : " ^ pr_data_type "" false type_t ^ ")"
+    in
+    pr_enable str enable
+
 let rec pr_l_value off enable (lv : l_value) =
   match lv with
-  | Id { id; type_t; passed_by; frame_offset; parent_path;_ } ->
+  | Simple slv -> pr_simple_l_value off enable slv
+  | ArrayAccess {simple_l_value=lval; exprs;_} ->
       let str =
-        off ^ "id("
-        ^ (if passed_by = Reference then "passed by ref " else "")
-        ^ id ^ " : "
-        ^ pr_data_type "" false type_t
-        ^ "): ["
-        ^ String.concat "_" (List.rev parent_path)
-        ^ "]" ^ " offset: " ^ string_of_int frame_offset
-      in
-      pr_enable str enable
-  | LString { id; type_t; _ } ->
-      let str =
-        off ^ "l_string(" ^ id ^ " : " ^ pr_data_type "" false type_t ^ ")"
-      in
-      pr_enable str enable
-  | ArrayAccess (lval, exprs) ->
-      let str =
-        off ^ "array_access(" ^ pr_l_value "" false lval ^ endl
+        off ^ "array_access(" ^ pr_simple_l_value "" false lval ^ endl
         ^ String.concat ""
             (List.mapi
                (fun i e -> pr_expr (off ^ sep) (i <> List.length exprs - 1) e)
@@ -106,15 +113,15 @@ and pr_func_call off enable (fc : func_call) =
     ^ "] " ^ "caller["
     ^ String.concat "_" (List.rev fc.caller_path)
     ^ "] return type: "
-    ^ pr_data_type "" false fc.type_t
+    ^ pr_scalar_type "" false fc.type_t
     ^ ")"
   in
   pr_enable str enable
 
 and pr_expr off enable = function
-  | LitInt { lit_int; _ } ->
+  | LitInt { value=lit_int; _ } ->
       pr_enable (off ^ "lit_int(" ^ string_of_int lit_int ^ ")") enable
-  | LitChar { lit_char; _ } ->
+  | LitChar { value=lit_char; _ } ->
       pr_enable (off ^ "lit_char(" ^ Char.escaped lit_char ^ ")") enable
   | LValue lval -> pr_l_value off enable lval
   | EFuncCall fc -> pr_func_call off enable fc
@@ -157,7 +164,8 @@ let rec pr_cond off enable cond =
   in
   pr_enable str enable
 
-let rec pr_block off enable stmts =
+let rec pr_block off enable block =
+  let {stmts;_} = block in
   let str =
     off ^ "Block: " ^ endl
     ^ String.concat ""
@@ -170,7 +178,7 @@ let rec pr_block off enable stmts =
 and pr_stmt off enable stmt =
   let str =
     match stmt with
-    | Empty -> off ^ "Empty"
+    | Empty _ -> off ^ "Empty"
     | Assign (lv, e) ->
         off ^ "Assign: " ^ endl
         ^ pr_l_value (off ^ sep) true lv
@@ -203,7 +211,7 @@ let pr_header off enable (func : func) =
     ^ String.concat ""
         (List.map (fun f -> pr_param_def (off ^ sep ^ sep) true f) func.params)
     ^ off ^ sep ^ "data_type: "
-    ^ pr_data_type "" false func.type_t
+    ^ pr_scalar_type "" false func.type_t
     ^ ")"
   in
   pr_enable str enable

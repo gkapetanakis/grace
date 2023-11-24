@@ -1,8 +1,8 @@
 (tests
  (names lexer parser codegen croque)
- (deps
-  (source_tree ./programs))
- (libraries grace_lib llvm.executionengine llvm.analysis llvm))
+;; (deps
+;;  (source_tree ./programs))
+ (libraries grace_lib llvm.analysis llvm))
 
 (env
  (dev

@@ -1,29 +1,17 @@
 open Ast
 
-type mode = AstOnly | All
-
-let mode = ref All
-
 let tbl : Symbol.symbol_table =
-  { parent_path = []; scopes = []; table = Hashtbl.create 100 }
+  { scopes = []; table = Hashtbl.create 100; parent_path = [] }
 
 let enjoy sem node =
-  match !mode with
-  | AstOnly -> node
-  | All ->
-      sem () |> ignore;
-      node
+  ignore (sem ()); node
 
-let wrap_open_scope func_id sym_tbl =
-  match !mode with AstOnly -> () | All -> Symbol.open_scope func_id sym_tbl
+let wrap_open_scope func_id sym_tbl = Symbol.open_scope func_id sym_tbl
 
 (* when closing a scope we should check for function definitions/declarations... *)
 let wrap_close_scope loc sym_tbl =
-  match !mode with
-  | AstOnly -> ()
-  | All ->
-      Sem.sem_close_scope loc sym_tbl;
-      Symbol.close_scope loc sym_tbl
+  Sem.sem_close_scope loc sym_tbl;
+  Symbol.close_scope loc sym_tbl
 
 let wrap_var_def loc id vt sym_tbl =
   let var_def : var_def =
@@ -61,7 +49,7 @@ let wrap_l_value_id loc id exprs sym_tbl =
   let l_value_id : l_value_id =
     {
       id;
-      type_t = Nothing;
+      type_t = Scalar Nothing;
       (* will be changed by sem_l_value *)
       passed_by = Value;
       (* will be changed by sem_l_value *)
@@ -74,8 +62,8 @@ let wrap_l_value_id loc id exprs sym_tbl =
   in
   let l_value =
     match exprs with
-    | [] -> Id l_value_id
-    | _ -> ArrayAccess (Id l_value_id, exprs)
+    | [] -> Simple (Id l_value_id)
+    | _ -> ArrayAccess {simple_l_value = Id l_value_id; exprs; loc}
   in
   let sem () = Sem.sem_l_value l_value sym_tbl in
   enjoy sem l_value
@@ -86,8 +74,8 @@ let wrap_l_value_string loc str exprs sym_tbl =
   in
   let l_value =
     match exprs with
-    | [] -> LString l_value_str
-    | _ -> ArrayAccess (LString l_value_str, exprs)
+    | [] -> Simple (LString l_value_str)
+    | _ -> ArrayAccess {simple_l_value = LString l_value_str; exprs; loc}
   in
   let sem () = Sem.sem_l_value l_value sym_tbl in
   enjoy sem l_value
@@ -110,12 +98,12 @@ let wrap_func_call loc id exprs (sym_tbl : Symbol.symbol_table) =
   enjoy sem func_call
 
 let wrap_expr_lit_int loc num sym_tbl =
-  let expr : expr = LitInt { lit_int = num; loc } in
+  let expr : expr = LitInt { value = num; loc } in
   let sem () = Sem.sem_expr expr sym_tbl in
   enjoy sem expr
 
 let wrap_expr_lit_char loc chr sym_tbl =
-  let expr : expr = LitChar { lit_char = chr; loc } in
+  let expr : expr = LitChar { value = chr; loc } in
   let sem () = Sem.sem_expr expr sym_tbl in
   enjoy sem expr
 
@@ -160,26 +148,18 @@ let wrap_block2 _loc stmts =
     (fun stmt acc -> match stmt with Return _ -> [ stmt ] | _ -> stmt :: acc)
     stmts []
 
-let wrap_block _loc stmts =
-  []
-  |> (List.fold_right
-        (fun stmt acc ->
-          match stmt with Block b -> b @ acc | _ -> stmt :: acc)
-        stmts []
-     |> List.fold_right (fun stmt acc ->
-            match stmt with Return _ -> [ stmt ] | _ -> stmt :: acc))
+let wrap_block loc stmts =
+  let flattened_stmts = List.fold_right
+  (fun stmt acc ->
+    match stmt with Block b -> b.stmts @ acc | _ -> stmt :: acc)
+  stmts [] in
+  let stmts = List.fold_right (fun stmt acc ->
+    match stmt with Return _ -> [ stmt ] | _ -> stmt :: acc)
+  flattened_stmts [] in
+  { stmts; loc}
 
-(*let rec wrap_block _loc stmts =
-  List.concat (List.fold_right
-    (fun stmt acc ->
-      match stmt with
-      | Return _ -> [ [ stmt ] ]
-      | Block b -> (wrap_block _loc b) :: acc
-      | _ -> [ stmt ] :: acc)
-    stmts [])*)
-
-let wrap_stmt_empty _loc sym_tbl =
-  let stmt : stmt = Empty in
+let wrap_stmt_empty loc sym_tbl =
+  let stmt : stmt = Empty loc in
   let sem () = Sem.sem_stmt stmt sym_tbl in
   enjoy sem stmt
 
@@ -227,7 +207,6 @@ let wrap_decl_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
     }
   in
   let sem () =
-    Sem.sem_header decl;
     Sem.sem_func_decl decl sym_tbl;
     Sem.ins_func_decl decl sym_tbl;
     wrap_open_scope id sym_tbl;
@@ -241,7 +220,7 @@ let wrap_decl_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
     wrap_close_scope loc sym_tbl
   in
   enjoy sem decl
-
+  
 let wrap_def_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
   let def =
     {
@@ -258,7 +237,6 @@ let wrap_def_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
     }
   in
   let sem () =
-    Sem.sem_header def;
     Sem.sem_func_def def sym_tbl;
     Sem.ins_func_def def sym_tbl;
     wrap_open_scope id sym_tbl;

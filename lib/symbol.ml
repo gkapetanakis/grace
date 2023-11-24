@@ -2,20 +2,42 @@ open Error
 open Ast
 
 let start = 1
-(* we might choose that offsets start at 0, but I think starting at 1 will prove to be a good idea, we'll find out later *)
 
 type entry_type =
   | Variable of var_def ref
   | Parameter of param_def ref
   | Function of func ref
 
+let get_loc_entry_type (entry_type : entry_type) =
+  match entry_type with
+  | Variable v -> !v.loc
+  | Parameter p -> !p.loc
+  | Function f -> !f.loc
+
+let get_data_type_entry_type (entry_type : entry_type) =
+  match entry_type with
+  | Variable v -> !v.type_t
+  | Parameter p -> !p.type_t
+  | Function f -> Scalar !f.type_t
+
+let get_return_type_entry_type (entry_type : entry_type) =
+  match entry_type with
+  | Function f -> !f.type_t
+  | _ -> raise (Internal_compiler_error "Tried to get return type of non-function")
+
 type entry = { id : string; type_t : entry_type; scope : scope ref }
 and scope = { mutable next_offset : int; mutable entries : entry list }
 
+let get_loc_entry (entry : entry) = get_loc_entry_type entry.type_t
+let get_data_type_entry (entry : entry) = get_data_type_entry_type entry.type_t
+
+let get_return_type_entry (entry : entry) = get_return_type_entry_type entry.type_t
+
 type symbol_table = {
-  mutable parent_path : string list;
   mutable scopes : scope list;
   table : (string, entry) Hashtbl.t;
+  mutable parent_path : string list;
+  (*mutable depth : int; *)
 }
 
 let get_and_increment_offset (sym_tbl : symbol_table) =
@@ -23,12 +45,6 @@ let get_and_increment_offset (sym_tbl : symbol_table) =
   let offset = scope.next_offset in
   scope.next_offset <- scope.next_offset + 1;
   offset
-
-let type_of_entry { type_t; _ } =
-  match type_t with
-  | Variable v -> !v.type_t
-  | Parameter p -> !p.type_t
-  | Function f -> !f.type_t
 
 let insert loc (id : string) (type_t : entry_type) (sym_tbl : symbol_table) =
   match sym_tbl.scopes with
@@ -58,7 +74,7 @@ let open_scope (func_id : string) (sym_tbl : symbol_table) =
   sym_tbl.scopes <- scope :: sym_tbl.scopes;
   sym_tbl.parent_path <-
     (if func_id = String.empty then sym_tbl.parent_path
-     else func_id :: sym_tbl.parent_path)
+      else func_id :: sym_tbl.parent_path)
 
 let close_scope loc (sym_tbl : symbol_table) =
   match sym_tbl.scopes with

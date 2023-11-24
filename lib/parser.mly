@@ -4,8 +4,8 @@
 
 %start <Ast.program> program
 
-%type <Ast.data_type> compl_data_type
-%type <Ast.data_type> incompl_data_type
+%type <Ast.scalar> compl_data_type
+%type <Ast.scalar> incompl_data_type
 %type <Ast.un_arit_op> un_arit_op
 %type <Ast.bin_arit_op> bin_arit_op
 %type <Ast.un_logic_op> un_logic_op
