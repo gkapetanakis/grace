@@ -6,6 +6,13 @@ let i32_t = Llvm.i32_type context
 let void_t = Llvm.void_type context
 let c8 = Llvm.const_int i8_t
 let c32 = Llvm.const_int i32_t
+let _ = Llvm_all_backends.initialize ()
+let triple = Llvm_target.Target.default_triple ()
+let _ = Llvm.set_target_triple triple the_module
+let target = Llvm_target.Target.by_triple triple
+let machine = Llvm_target.TargetMachine.create ~triple target
+let dly = Llvm_target.TargetMachine.data_layout machine
+let _ = Llvm.set_data_layout (Llvm_target.DataLayout.as_string dly) the_module
 
 let grace_runtime_lib () =
   let func_decl (name, ret_type, arg_l) =
@@ -453,14 +460,7 @@ let add_optimizations pass_mgr =
   in
   List.iter (fun opt -> opt pass_mgr) optimizations
 
-let irgen (Ast.MainFunc func) ~(enable_optimizations : bool) =
-  Llvm_all_backends.initialize ();
-  let triple = Llvm_target.Target.default_triple () in
-  Llvm.set_target_triple triple the_module;
-  let target = Llvm_target.Target.by_triple triple in
-  let machine = Llvm_target.TargetMachine.create ~triple target in
-  let dly = Llvm_target.TargetMachine.data_layout machine in
-  Llvm.set_data_layout (Llvm_target.DataLayout.as_string dly) the_module;
+let irgen (Ast.MainFunc func) enable_optimizations =
   (*grace_runtime_lib ();*)
   gen_all_frame_types (Ast.MainFunc func);
   gen_func_def func;
@@ -468,5 +468,15 @@ let irgen (Ast.MainFunc func) ~(enable_optimizations : bool) =
     let pass_mgr = Llvm.PassManager.create () in
     add_optimizations pass_mgr;
     ignore (Llvm.PassManager.run_module the_module pass_mgr));
-  print_endline (Llvm.string_of_llmodule the_module);
   Llvm_analysis.assert_valid_module the_module
+
+let codegen (Ast.MainFunc main) enable_optimizations ir_outchan comp_outchan =
+  irgen (Ast.MainFunc main) enable_optimizations;
+  let ir_out = Llvm.string_of_llmodule the_module in
+  let comp_out =
+    Llvm.MemoryBuffer.as_string
+      (Llvm_target.TargetMachine.emit_to_memory_buffer the_module
+         Llvm_target.CodeGenFileType.AssemblyFile machine)
+  in
+  Out_channel.output_string ir_outchan ir_out;
+  Out_channel.output_string comp_outchan comp_out

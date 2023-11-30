@@ -24,7 +24,7 @@ let () =
     try
       (*print_endline filename;*)
       let ast_node = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
-      Grace_lib.Codegen.irgen ast_node ~enable_optimizations:false
+      Grace_lib.Codegen.irgen ast_node false stdout
       (*List.iter
         (fun named_type ->
           print_endline (Llvm.string_of_lltype (Llvm.element_type named_type)))
