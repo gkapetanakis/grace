@@ -46,7 +46,6 @@ type l_value_lstring = { id : string; type_t : data_type; loc : loc }
 type l_value_array_access = {
   simple_l_value : simple_l_value;
   exprs : expr list;
-  loc : loc;
 }
 
 and simple_l_value = Id of l_value_id | LString of l_value_lstring
@@ -109,7 +108,7 @@ let get_loc_simple_l_value = function
 
 let get_loc_l_value = function
   | Simple simple_l_value -> get_loc_simple_l_value simple_l_value
-  | ArrayAccess array_access -> array_access.loc
+  | ArrayAccess { simple_l_value; _ } -> get_loc_simple_l_value simple_l_value
 
 let rec get_loc_expr = function
   | LitInt lit_int -> lit_int.loc

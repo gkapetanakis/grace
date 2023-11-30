@@ -64,7 +64,7 @@ let wrap_l_value_id loc id exprs sym_tbl =
   let l_value =
     match exprs with
     | [] -> Simple (Id l_value_id)
-    | _ -> ArrayAccess { simple_l_value = Id l_value_id; exprs; loc }
+    | _ -> ArrayAccess { simple_l_value = Id l_value_id; exprs }
   in
   let sem () = Sem.sem_l_value l_value sym_tbl in
   enjoy sem l_value
@@ -76,7 +76,7 @@ let wrap_l_value_string loc str exprs sym_tbl =
   let l_value =
     match exprs with
     | [] -> Simple (LString l_value_str)
-    | _ -> ArrayAccess { simple_l_value = LString l_value_str; exprs; loc }
+    | _ -> ArrayAccess { simple_l_value = LString l_value_str; exprs }
   in
   let sem () = Sem.sem_l_value l_value sym_tbl in
   enjoy sem l_value

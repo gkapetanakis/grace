@@ -206,7 +206,8 @@ let sem_simple_l_value (slv : simple_l_value) (sym_tbl : symbol_table) =
 let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
   match lv with
   | Simple slv -> sem_simple_l_value slv sym_tbl
-  | ArrayAccess { simple_l_value = slv; exprs; loc } -> (
+  | ArrayAccess { simple_l_value = slv; exprs } -> (
+      let loc = get_loc_l_value lv in
       let rec comp_dims_exprs dims exprs loc =
         match (dims, exprs) with
         | [], [] -> []
