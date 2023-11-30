@@ -395,51 +395,65 @@ let rec gen_func_def (func : Ast.func) =
       )
   | Some _ -> ()
 
-let add_opts pm =
-  let opts =
+let add_optimizations pass_mgr =
+  let optimizations =
     [
-      Llvm_ipo.add_ipsccp;
-      Llvm_scalar_opts.add_memory_to_register_promotion;
+      Llvm_ipo.add_argument_promotion;
+      Llvm_ipo.add_constant_merge;
       Llvm_ipo.add_dead_arg_elimination;
-      Llvm_scalar_opts.add_instruction_combination;
-      Llvm_scalar_opts.add_cfg_simplification;
-      Llvm_ipo.add_function_inlining;
       Llvm_ipo.add_function_attrs;
-      Llvm_scalar_opts.add_scalar_repl_aggregation;
-      Llvm_scalar_opts.add_early_cse;
-      Llvm_scalar_opts.add_cfg_simplification;
-      Llvm_scalar_opts.add_instruction_combination;
-      Llvm_scalar_opts.add_tail_call_elimination;
-      Llvm_scalar_opts.add_reassociation;
-      Llvm_scalar_opts.add_loop_rotation;
-      Llvm_scalar_opts.add_loop_unswitch;
-      Llvm_scalar_opts.add_instruction_combination;
-      Llvm_scalar_opts.add_cfg_simplification;
-      Llvm_scalar_opts.add_ind_var_simplification;
-      Llvm_scalar_opts.add_loop_idiom;
-      Llvm_scalar_opts.add_loop_deletion;
-      Llvm_scalar_opts.add_loop_unroll;
-      Llvm_scalar_opts.add_gvn;
-      Llvm_scalar_opts.add_memcpy_opt;
-      Llvm_scalar_opts.add_sccp;
-      Llvm_scalar_opts.add_licm;
-      Llvm_ipo.add_global_optimizer;
+      Llvm_ipo.add_function_inlining;
+      (* Llvm_ipo.add_always_inliner;* // let's not use this one *)
       Llvm_ipo.add_global_dce;
+      Llvm_ipo.add_global_optimizer;
+      (* Llvm_ipo.add_ipc_propagation; // might work with later versions of the bindings *)
+      Llvm_ipo.add_prune_eh;
+      Llvm_ipo.add_ipsccp;
+      (* Llvm_ipo.add_internalize ~all_but_main:true; // not sure if this is useful *)
+      Llvm_ipo.add_strip_dead_prototypes;
+      Llvm_ipo.add_strip_symbols;
       Llvm_scalar_opts.add_aggressive_dce;
+      Llvm_scalar_opts.add_alignment_from_assumptions;
       Llvm_scalar_opts.add_cfg_simplification;
-      Llvm_scalar_opts.add_instruction_combination;
       Llvm_scalar_opts.add_dead_store_elimination;
+      (* Llvm_scalar_opts.add_scalarizer; // not sure if this is useful *)
+      Llvm_scalar_opts.add_merged_load_store_motion;
+      Llvm_scalar_opts.add_gvn;
+      Llvm_scalar_opts.add_ind_var_simplification;
+      Llvm_scalar_opts.add_instruction_combination;
+      Llvm_scalar_opts.add_jump_threading;
+      Llvm_scalar_opts.add_licm;
+      Llvm_scalar_opts.add_loop_deletion;
+      Llvm_scalar_opts.add_loop_idiom;
+      Llvm_scalar_opts.add_loop_rotation;
+      Llvm_scalar_opts.add_loop_reroll;
+      Llvm_scalar_opts.add_loop_unroll;
+      Llvm_scalar_opts.add_loop_unswitch;
+      Llvm_scalar_opts.add_memcpy_opt;
+      Llvm_scalar_opts.add_partially_inline_lib_calls;
+      Llvm_scalar_opts.add_lower_switch;
+      Llvm_scalar_opts.add_memory_to_register_promotion;
+      Llvm_scalar_opts.add_reassociation;
+      Llvm_scalar_opts.add_sccp;
+      Llvm_scalar_opts.add_scalar_repl_aggregation;
+      Llvm_scalar_opts.add_lib_call_simplification;
+      Llvm_scalar_opts.add_tail_call_elimination;
+      (* Llvm_scalar_opts.add_constant_propagation; // might work with later versions of the bindings *)
+      Llvm_scalar_opts.add_memory_to_register_demotion;
+      Llvm_scalar_opts.add_verifier;
+      Llvm_scalar_opts.add_correlated_value_propagation;
+      Llvm_scalar_opts.add_early_cse;
+      Llvm_scalar_opts.add_lower_expect_intrinsic;
+      Llvm_scalar_opts.add_type_based_alias_analysis;
+      Llvm_scalar_opts.add_scoped_no_alias_alias_analysis;
+      Llvm_scalar_opts.add_basic_alias_analysis;
       Llvm_vectorize.add_loop_vectorize;
       Llvm_vectorize.add_slp_vectorize;
-      Llvm_ipo.add_strip_dead_prototypes;
-      Llvm_ipo.add_global_dce;
-      (*Llvm_scalar_opts.add_constant_propagation;*)
-      Llvm_scalar_opts.add_cfg_simplification;
     ]
   in
-  List.iter (fun f -> f pm) opts
+  List.iter (fun opt -> opt pass_mgr) optimizations
 
-let irgen (Ast.MainFunc func) =
+let irgen (Ast.MainFunc func) ~(enable_optimizations : bool) =
   Llvm_all_backends.initialize ();
   let triple = Llvm_target.Target.default_triple () in
   Llvm.set_target_triple triple the_module;
@@ -450,5 +464,9 @@ let irgen (Ast.MainFunc func) =
   (*grace_runtime_lib ();*)
   gen_all_frame_types (Ast.MainFunc func);
   gen_func_def func;
+  if enable_optimizations then (
+    let pass_mgr = Llvm.PassManager.create () in
+    add_optimizations pass_mgr;
+    ignore (Llvm.PassManager.run_module the_module pass_mgr));
   print_endline (Llvm.string_of_llmodule the_module);
   Llvm_analysis.assert_valid_module the_module
