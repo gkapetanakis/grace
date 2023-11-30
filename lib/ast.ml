@@ -1,14 +1,11 @@
 type loc = Error.loc
-
 type scalar = Int | Char | Nothing
 type data_type = Scalar of scalar | Array of scalar * int option list
-
 type un_arit_op = Pos | Neg
 type bin_arit_op = Add | Sub | Mul | Div | Mod
 type un_logic_op = Not
 type bin_logic_op = And | Or
 type comp_op = Eq | Neq | Gt | Lt | Geq | Leq
-
 type var_type = data_type
 type param_type = data_type
 type ret_type = scalar
@@ -44,11 +41,7 @@ type l_value_id = {
   loc : loc;
 }
 
-type l_value_lstring = {
-  id : string;
-  type_t : data_type;
-  loc : loc;
-}
+type l_value_lstring = { id : string; type_t : data_type; loc : loc }
 
 type l_value_array_access = {
   simple_l_value : simple_l_value;
@@ -56,13 +49,8 @@ type l_value_array_access = {
   loc : loc;
 }
 
-and simple_l_value =
-  | Id of l_value_id
-  | LString of l_value_lstring
-
-and l_value =
-  | Simple of simple_l_value
-  | ArrayAccess of l_value_array_access
+and simple_l_value = Id of l_value_id | LString of l_value_lstring
+and l_value = Simple of simple_l_value | ArrayAccess of l_value_array_access
 
 and func_call = {
   id : string;
@@ -88,10 +76,7 @@ type cond =
   | BinLogicOp of cond * bin_logic_op * cond
   | CompOp of expr * comp_op * expr
 
-type block = {
-  stmts : stmt list;
-  loc : loc;
-}
+type block = { stmts : stmt list; loc : loc }
 
 and stmt =
   | Empty of loc
@@ -120,7 +105,7 @@ type program = MainFunc of func
 
 let get_loc_simple_l_value = function
   | Id id -> id.loc
-  | LString lstring -> lstring.loc  
+  | LString lstring -> lstring.loc
 
 let get_loc_l_value = function
   | Simple simple_l_value -> get_loc_simple_l_value simple_l_value
@@ -146,18 +131,19 @@ let get_loc_stmt = function
   | SFuncCall func_call -> func_call.loc
   | If (cond, _, _) -> get_loc_cond cond
   | While (cond, _) -> get_loc_cond cond
-  | Return { loc; _} -> loc
+  | Return { loc; _ } -> loc
 
 let get_loc_local_def = function
   | VarDef var_def -> var_def.loc
   | FuncDecl func -> func.loc
   | FuncDef func -> func.loc
 
-let get_loc_program = function
-  | MainFunc func -> func.loc
+let get_loc_program = function MainFunc func -> func.loc
 
-  let create_var_type dt dims =
-    match dims with [] -> Scalar dt | _ -> Array (dt, List.map (fun x -> Some x) dims)
+let create_var_type dt dims =
+  match dims with
+  | [] -> Scalar dt
+  | _ -> Array (dt, List.map (fun x -> Some x) dims)
 
 let create_param_type dt dims flexible =
   match (dims, flexible) with
@@ -165,7 +151,7 @@ let create_param_type dt dims flexible =
   | (_ :: _ as dims), false -> Array (dt, List.map (fun x -> Some x) dims)
   | dims, true -> Array (dt, None :: List.map (fun x -> Some x) dims)
 
-let l_string_dependence l_v = 
+let l_string_dependence l_v =
   let aux = function Id _ -> false | LString _ -> true in
   match l_v with
   | Simple simple_l_value -> aux simple_l_value
@@ -186,16 +172,13 @@ let reorganize_local_defs (local_defs : local_def list) =
   let vars, decls, funcs = reorganize_local_defs' local_defs [] [] [] in
   (List.rev vars, List.rev decls, List.rev funcs)
 
-  let get_parent_name (func : func) =
-    String.concat "." (List.rev func.parent_path)
-  
+let get_parent_name (func : func) =
+  String.concat "." (List.rev func.parent_path)
+
 let get_func_name (func : func) = get_parent_name func ^ "." ^ func.id
 let get_parent_frame_name (func : func) = "frame__" ^ get_parent_name func
 let get_frame_name (func : func) = "frame__" ^ get_func_name func
-
-let get_proper_parent_func_name (func : func) =
-  "func__" ^ get_parent_name func
-
+let get_proper_parent_func_name (func : func) = "func__" ^ get_parent_name func
 let get_proper_func_name (func : func) = "func__" ^ get_func_name func
 
 let get_proper_func_call_name (func_call : func_call) =

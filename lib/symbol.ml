@@ -23,7 +23,8 @@ let get_data_type_entry_type (entry_type : entry_type) =
 let get_return_type_entry_type (entry_type : entry_type) =
   match entry_type with
   | Function f -> !f.type_t
-  | _ -> raise (Internal_compiler_error "Tried to get return type of non-function")
+  | _ ->
+      raise (Internal_compiler_error "Tried to get return type of non-function")
 
 type entry = { id : string; type_t : entry_type; scope : scope ref }
 and scope = { mutable next_offset : int; mutable entries : entry list }
@@ -31,13 +32,13 @@ and scope = { mutable next_offset : int; mutable entries : entry list }
 let get_loc_entry (entry : entry) = get_loc_entry_type entry.type_t
 let get_data_type_entry (entry : entry) = get_data_type_entry_type entry.type_t
 
-let get_return_type_entry (entry : entry) = get_return_type_entry_type entry.type_t
+let get_return_type_entry (entry : entry) =
+  get_return_type_entry_type entry.type_t
 
 type symbol_table = {
   mutable scopes : scope list;
   table : (string, entry) Hashtbl.t;
-  mutable parent_path : string list;
-  (*mutable depth : int; *)
+  mutable parent_path : string list; (*mutable depth : int; *)
 }
 
 let get_and_increment_offset (sym_tbl : symbol_table) =
@@ -74,7 +75,7 @@ let open_scope (func_id : string) (sym_tbl : symbol_table) =
   sym_tbl.scopes <- scope :: sym_tbl.scopes;
   sym_tbl.parent_path <-
     (if func_id = String.empty then sym_tbl.parent_path
-      else func_id :: sym_tbl.parent_path)
+     else func_id :: sym_tbl.parent_path)
 
 let close_scope loc (sym_tbl : symbol_table) =
   match sym_tbl.scopes with

@@ -1,7 +1,6 @@
 let context = Llvm.global_context ()
 let the_module = Llvm.create_module context "grace"
 let builder = Llvm.builder context
-
 let i8_t = Llvm.i8_type context
 let i32_t = Llvm.i32_type context
 let void_t = Llvm.void_type context
@@ -69,7 +68,9 @@ let get_frame_type_ptr (func : Ast.func) =
   let frame_name = Ast.get_frame_name func in
   match Llvm.type_by_name the_module frame_name with
   | Some frame -> Llvm.pointer_type frame
-  | None -> raise (Error.Internal_compiler_error ("Frame type not found: " ^ frame_name))
+  | None ->
+      raise
+        (Error.Internal_compiler_error ("Frame type not found: " ^ frame_name))
 
 let get_all_frame_type_ptrs (Ast.MainFunc main_func : Ast.program) =
   let rec aux (acc : Llvm.lltype list) (funcs : Ast.func list list) =
@@ -102,43 +103,44 @@ let gen_all_frame_types (Ast.MainFunc main_func : Ast.program) =
   in
   aux main_func
 
-  let rec get_frame_ptr fr_ptr hops =
-    match hops with
-    | 0 -> fr_ptr
-    | hops ->
-        let link_ptr = Llvm.build_struct_gep fr_ptr 0 "link_ptr" builder in
-        let link = Llvm.build_load link_ptr "link" builder in
-        get_frame_ptr link (hops - 1)
-  
+let rec get_frame_ptr fr_ptr hops =
+  match hops with
+  | 0 -> fr_ptr
+  | hops ->
+      let link_ptr = Llvm.build_struct_gep fr_ptr 0 "link_ptr" builder in
+      let link = Llvm.build_load link_ptr "link" builder in
+      get_frame_ptr link (hops - 1)
+
 let rec gen_simple_l_value frame caller_path (slv : Ast.simple_l_value) =
   match slv with
   | Ast.Id l_val_id -> gen_l_val_id frame caller_path l_val_id
-  | Ast.LString Ast.{ id;_ } ->
-    let str = Llvm.build_global_string id id builder in
-    Llvm.build_struct_gep str 0 "str_ptr" builder
-    (* returns i8* - matches how parameters are passed, because global strings
-       are only passed by reference as parameters *)
+  | Ast.LString Ast.{ id; _ } ->
+      let str = Llvm.build_global_string id id builder in
+      Llvm.build_struct_gep str 0 "str_ptr" builder
+(* returns i8* - matches how parameters are passed, because global strings
+   are only passed by reference as parameters *)
 
 and gen_l_value frame caller_path (lv : Ast.l_value) =
   match lv with
   | Ast.Simple slv -> gen_simple_l_value frame caller_path slv
-  | Ast.ArrayAccess {simple_l_value=slv; exprs=e_l;_} ->
-    let l_val_ptr = gen_simple_l_value frame caller_path slv in
-    let expr_values_list = List.map (gen_expr frame caller_path) e_l in
-    let idx = match slv with
-    | Ast.Id { passed_by; type_t; _ } -> (
-      match passed_by, type_t with
-      | Ast.Reference, Ast.Array _ -> [] (* both reference AND array causes problems *)
-      | _, _ -> [c32 0]
-    )
-    | Ast.LString _ -> []
-    in
-    let expr_values_list = idx @ expr_values_list in
-    let e_v_array = Array.of_list expr_values_list in
-    Llvm.build_gep l_val_ptr e_v_array "array_access" builder
+  | Ast.ArrayAccess { simple_l_value = slv; exprs = e_l; _ } ->
+      let l_val_ptr = gen_simple_l_value frame caller_path slv in
+      let expr_values_list = List.map (gen_expr frame caller_path) e_l in
+      let idx =
+        match slv with
+        | Ast.Id { passed_by; type_t; _ } -> (
+            match (passed_by, type_t) with
+            | Ast.Reference, Ast.Array _ ->
+                [] (* both reference AND array causes problems *)
+            | _, _ -> [ c32 0 ])
+        | Ast.LString _ -> []
+      in
+      let expr_values_list = idx @ expr_values_list in
+      let e_v_array = Array.of_list expr_values_list in
+      Llvm.build_gep l_val_ptr e_v_array "array_access" builder
 
 and gen_l_val_id frame caller_path (l_val_id : Ast.l_value_id) =
-  let Ast.{ id; passed_by; frame_offset; parent_path; _} = l_val_id in
+  let Ast.{ id; passed_by; frame_offset; parent_path; _ } = l_val_id in
   let hops = List.length caller_path - List.length parent_path in
   let frame_ptr = get_frame_ptr frame hops in
   let element_ptr =
@@ -151,38 +153,41 @@ and gen_l_val_id frame caller_path (l_val_id : Ast.l_value_id) =
 and gen_func_arg frame caller_path ((e, pb) : Ast.expr * Ast.pass_by) =
   match pb with
   | Ast.Value -> gen_expr frame caller_path e
-  | Ast.Reference ->
-    let l_v =
-      match e with
-      | Ast.LValue l_v -> l_v
-      | _ -> raise (Error.Internal_compiler_error "Cannot pass by reference a non-lvalue")
-    in
-    match l_v with
-    | Ast.Simple (Ast.Id l_val_id) ->
-      let Ast.{ passed_by; type_t; _ } = l_val_id in (
-      match passed_by, type_t with
-      | Ast.Value, Ast.Array _ ->
-        let l_val_ptr = gen_l_value frame caller_path l_v in
-        Llvm.build_gep l_val_ptr [| c32 0; c32 0 |] "array_ptr" builder
-        (*
+  | Ast.Reference -> (
+      let l_v =
+        match e with
+        | Ast.LValue l_v -> l_v
+        | _ ->
+            raise
+              (Error.Internal_compiler_error
+                 "Cannot pass by reference a non-lvalue")
+      in
+      match l_v with
+      | Ast.Simple (Ast.Id l_val_id) -> (
+          let Ast.{ passed_by; type_t; _ } = l_val_id in
+          match (passed_by, type_t) with
+          | Ast.Value, Ast.Array _ ->
+              let l_val_ptr = gen_l_value frame caller_path l_v in
+              Llvm.build_gep l_val_ptr [| c32 0; c32 0 |] "array_ptr" builder
+              (*
           Llvm.build_struct_gep l_val_ptr 0 "array_ptr" builder
           PROBABLY EQUIVALENT CODE, MIGHT CHECK LATER  
         *)
-      | _ -> gen_l_value frame caller_path l_v
-      )
-    | Ast.Simple (Ast.LString _) -> gen_l_value frame caller_path l_v
-    | Ast.ArrayAccess Ast.{simple_l_value=lv;exprs=e_l;_} ->
-      match lv with
-      | Ast.Id { passed_by; type_t; _} -> (
-        match passed_by, type_t with
-        | Ast.Value, Ast.Array (_, dims) ->
-          if List.length dims > List.length e_l then
-            let l_val_ptr = gen_l_value frame caller_path l_v in
-            Llvm.build_gep l_val_ptr [| c32 0; c32 0 |] "array_ptr" builder
-          else gen_l_value frame caller_path l_v
-        | _ -> gen_l_value frame caller_path l_v
-      )
-      | _ -> gen_l_value frame caller_path l_v
+          | _ -> gen_l_value frame caller_path l_v)
+      | Ast.Simple (Ast.LString _) -> gen_l_value frame caller_path l_v
+      | Ast.ArrayAccess Ast.{ simple_l_value = lv; exprs = e_l; _ } -> (
+          match lv with
+          | Ast.Id { passed_by; type_t; _ } -> (
+              match (passed_by, type_t) with
+              | Ast.Value, Ast.Array (_, dims) ->
+                  if List.length dims > List.length e_l then
+                    let l_val_ptr = gen_l_value frame caller_path l_v in
+                    Llvm.build_gep l_val_ptr
+                      [| c32 0; c32 0 |]
+                      "array_ptr" builder
+                  else gen_l_value frame caller_path l_v
+              | _ -> gen_l_value frame caller_path l_v)
+          | _ -> gen_l_value frame caller_path l_v))
 
 and gen_func_call frame caller_path (func_call : Ast.func_call) =
   let func_decl =
@@ -193,7 +198,7 @@ and gen_func_call frame caller_path (func_call : Ast.func_call) =
     | None ->
         raise
           (Error.Internal_compiler_error
-              ("Function declaration not found: " ^ func_call.id))
+             ("Function declaration not found: " ^ func_call.id))
   in
   let func_args = List.map (gen_func_arg frame caller_path) func_call.args in
   let hops = List.length caller_path - List.length func_call.callee_path in
@@ -262,74 +267,68 @@ let rec gen_cond frame caller_path (cond : Ast.cond) =
       | Ast.Lt -> Llvm.build_icmp Llvm.Icmp.Slt lhs rhs "lt" builder
       | Ast.Geq -> Llvm.build_icmp Llvm.Icmp.Sge lhs rhs "geq" builder
       | Ast.Leq -> Llvm.build_icmp Llvm.Icmp.Sle lhs rhs "leq" builder)
-      
+
 let rec gen_block frame caller_path (block : Ast.block) =
   List.iter (gen_stmt frame caller_path) block.stmts
 
-  and gen_stmt frame caller_path (stmt : Ast.stmt) =
-    match stmt with
-    | Ast.Empty _ -> ()
-    | Ast.Assign (l_val, expr) ->
-        let rhs = gen_expr frame caller_path expr in
-        let l_val_ptr = gen_l_value frame caller_path l_val in
-        ignore (Llvm.build_store rhs l_val_ptr builder)
-    | Ast.Block block -> gen_block frame caller_path block
-    | Ast.SFuncCall func_call ->
-        ignore (gen_func_call frame caller_path func_call)
-    | Ast.If (cond, stmt1_o, stmt2_o) ->
-        let cond = gen_cond frame caller_path cond in
-        (* not sure if the correct condition is checked *)
-        (*let icmp_ne = Llvm.build_icmp Llvm.Icmp.Ne cond (c1 0) "if" builder in*)
-        let func = Llvm.block_parent (Llvm.insertion_block builder) in
-  
-        let then_block = Llvm.append_block context "then" func in
-        let else_block = Llvm.append_block context "else" func in
-        let merge_block = Llvm.append_block context "merge" func in
-        let _ = Llvm.build_cond_br cond then_block else_block builder in
-        Llvm.position_at_end then_block builder;
-        gen_stmt frame caller_path (Option.get stmt1_o);
-        (* will never be None *)
-        (
-          match Llvm.block_terminator (Llvm.insertion_block builder) with
-          | None -> ignore (Llvm.build_br merge_block builder)
-          | Some _ -> ()
-        );
-        Llvm.position_at_end else_block builder;
-        if Option.is_some stmt2_o then
-          gen_stmt frame caller_path (Option.get stmt2_o);
-        (
-          match Llvm.block_terminator (Llvm.insertion_block builder) with
-          | None -> ignore (Llvm.build_br merge_block builder)
-          | Some _ -> ()
-        );
-        Llvm.position_at_end merge_block builder
-    | Ast.While (cond, stmt) ->
-        let func = Llvm.block_parent (Llvm.insertion_block builder) in
-        let cond_block = Llvm.append_block context "cond" func in
-        let body_block = Llvm.append_block context "body" func in
-        let merge_block = Llvm.append_block context "merge" func in
-        let _ = Llvm.build_br cond_block builder in
-        Llvm.position_at_end cond_block builder;
-        let cond = gen_cond frame caller_path cond in
-        let _ = Llvm.build_cond_br cond body_block merge_block builder in
-        Llvm.position_at_end body_block builder;
-        gen_stmt frame caller_path stmt;
-        (
-          match Llvm.block_terminator (Llvm.insertion_block builder) with
-          | None -> ignore (Llvm.build_br cond_block builder)
-          | Some _ -> ()
-        );
-        Llvm.position_at_end merge_block builder
-    | Return { expr_o; _ } -> (
-        match expr_o with
-        | None -> ignore (Llvm.build_ret_void builder)
-        | Some expr ->
-            let ret_val = gen_expr frame caller_path expr in
-            match expr with
-            | Ast.EFuncCall Ast.{type_t;_} -> 
+and gen_stmt frame caller_path (stmt : Ast.stmt) =
+  match stmt with
+  | Ast.Empty _ -> ()
+  | Ast.Assign (l_val, expr) ->
+      let rhs = gen_expr frame caller_path expr in
+      let l_val_ptr = gen_l_value frame caller_path l_val in
+      ignore (Llvm.build_store rhs l_val_ptr builder)
+  | Ast.Block block -> gen_block frame caller_path block
+  | Ast.SFuncCall func_call ->
+      ignore (gen_func_call frame caller_path func_call)
+  | Ast.If (cond, stmt1_o, stmt2_o) ->
+      let cond = gen_cond frame caller_path cond in
+      (* not sure if the correct condition is checked *)
+      (*let icmp_ne = Llvm.build_icmp Llvm.Icmp.Ne cond (c1 0) "if" builder in*)
+      let func = Llvm.block_parent (Llvm.insertion_block builder) in
+
+      let then_block = Llvm.append_block context "then" func in
+      let else_block = Llvm.append_block context "else" func in
+      let merge_block = Llvm.append_block context "merge" func in
+      let _ = Llvm.build_cond_br cond then_block else_block builder in
+      Llvm.position_at_end then_block builder;
+      gen_stmt frame caller_path (Option.get stmt1_o);
+      (* will never be None *)
+      (match Llvm.block_terminator (Llvm.insertion_block builder) with
+      | None -> ignore (Llvm.build_br merge_block builder)
+      | Some _ -> ());
+      Llvm.position_at_end else_block builder;
+      if Option.is_some stmt2_o then
+        gen_stmt frame caller_path (Option.get stmt2_o);
+      (match Llvm.block_terminator (Llvm.insertion_block builder) with
+      | None -> ignore (Llvm.build_br merge_block builder)
+      | Some _ -> ());
+      Llvm.position_at_end merge_block builder
+  | Ast.While (cond, stmt) ->
+      let func = Llvm.block_parent (Llvm.insertion_block builder) in
+      let cond_block = Llvm.append_block context "cond" func in
+      let body_block = Llvm.append_block context "body" func in
+      let merge_block = Llvm.append_block context "merge" func in
+      let _ = Llvm.build_br cond_block builder in
+      Llvm.position_at_end cond_block builder;
+      let cond = gen_cond frame caller_path cond in
+      let _ = Llvm.build_cond_br cond body_block merge_block builder in
+      Llvm.position_at_end body_block builder;
+      gen_stmt frame caller_path stmt;
+      (match Llvm.block_terminator (Llvm.insertion_block builder) with
+      | None -> ignore (Llvm.build_br cond_block builder)
+      | Some _ -> ());
+      Llvm.position_at_end merge_block builder
+  | Return { expr_o; _ } -> (
+      match expr_o with
+      | None -> ignore (Llvm.build_ret_void builder)
+      | Some expr -> (
+          let ret_val = gen_expr frame caller_path expr in
+          match expr with
+          | Ast.EFuncCall Ast.{ type_t; _ } ->
               if type_t = Ast.Nothing then ignore (Llvm.build_ret_void builder)
               else ignore (Llvm.build_ret ret_val builder)
-            | _ -> ignore (Llvm.build_ret ret_val builder))
+          | _ -> ignore (Llvm.build_ret ret_val builder)))
 
 let gen_func_decl (func : Ast.func) =
   let parent_frame_type_ptr = get_parent_frame_type_ptr func in
@@ -339,11 +338,17 @@ let gen_func_decl (func : Ast.func) =
   let func_type = Llvm.function_type ret_type (Array.of_list full_params) in
   match Llvm.lookup_function (Ast.get_proper_func_name func) the_module with
   | None ->
-      Llvm.declare_function (Ast.get_proper_func_name func) func_type the_module |> ignore
-  | Some _ -> raise (Error.Internal_compiler_error ("Function " ^ (Ast.get_func_name func) ^ " already declared"))
+      Llvm.declare_function (Ast.get_proper_func_name func) func_type the_module
+      |> ignore
+  | Some _ ->
+      raise
+        (Error.Internal_compiler_error
+           ("Function " ^ Ast.get_func_name func ^ " already declared"))
 
 let rec gen_func_def (func : Ast.func) =
-  let _, local_f_decls, local_f_defs = Ast.reorganize_local_defs func.local_defs in
+  let _, local_f_decls, local_f_defs =
+    Ast.reorganize_local_defs func.local_defs
+  in
   List.iter gen_func_decl local_f_decls;
   List.iter gen_func_def local_f_defs;
 
@@ -355,7 +360,9 @@ let rec gen_func_def (func : Ast.func) =
   let func_decl =
     match Llvm.lookup_function (Ast.get_proper_func_name func) the_module with
     | None ->
-        Llvm.declare_function (Ast.get_proper_func_name func) func_type the_module
+        Llvm.declare_function
+          (Ast.get_proper_func_name func)
+          func_type the_module
     | Some fd -> fd
   in
   let func_block = Llvm.append_block context "entry" func_decl in
@@ -365,7 +372,7 @@ let rec gen_func_def (func : Ast.func) =
     | None ->
         raise
           (Error.Internal_compiler_error
-              ("Frame type not found for name: " ^ Ast.get_frame_name func))
+             ("Frame type not found for name: " ^ Ast.get_frame_name func))
     | Some ft -> ft
   in
   let frame = Llvm.build_alloca frame_type "frame_struct" builder in
@@ -383,11 +390,53 @@ let rec gen_func_def (func : Ast.func) =
   | None -> (
       match func.type_t with
       | Ast.Nothing -> ignore (Llvm.build_ret_void builder)
-      | _ -> raise (Error.Codegen_error (func.loc, "Function must return a value")))
+      | _ ->
+          raise (Error.Codegen_error (func.loc, "Function must return a value"))
+      )
   | Some _ -> ()
 
 let add_opts pm =
-  let opts = [] in
+  let opts =
+    [
+      Llvm_ipo.add_ipsccp;
+      Llvm_scalar_opts.add_memory_to_register_promotion;
+      Llvm_ipo.add_dead_arg_elimination;
+      Llvm_scalar_opts.add_instruction_combination;
+      Llvm_scalar_opts.add_cfg_simplification;
+      Llvm_ipo.add_function_inlining;
+      Llvm_ipo.add_function_attrs;
+      Llvm_scalar_opts.add_scalar_repl_aggregation;
+      Llvm_scalar_opts.add_early_cse;
+      Llvm_scalar_opts.add_cfg_simplification;
+      Llvm_scalar_opts.add_instruction_combination;
+      Llvm_scalar_opts.add_tail_call_elimination;
+      Llvm_scalar_opts.add_reassociation;
+      Llvm_scalar_opts.add_loop_rotation;
+      Llvm_scalar_opts.add_loop_unswitch;
+      Llvm_scalar_opts.add_instruction_combination;
+      Llvm_scalar_opts.add_cfg_simplification;
+      Llvm_scalar_opts.add_ind_var_simplification;
+      Llvm_scalar_opts.add_loop_idiom;
+      Llvm_scalar_opts.add_loop_deletion;
+      Llvm_scalar_opts.add_loop_unroll;
+      Llvm_scalar_opts.add_gvn;
+      Llvm_scalar_opts.add_memcpy_opt;
+      Llvm_scalar_opts.add_sccp;
+      Llvm_scalar_opts.add_licm;
+      Llvm_ipo.add_global_optimizer;
+      Llvm_ipo.add_global_dce;
+      Llvm_scalar_opts.add_aggressive_dce;
+      Llvm_scalar_opts.add_cfg_simplification;
+      Llvm_scalar_opts.add_instruction_combination;
+      Llvm_scalar_opts.add_dead_store_elimination;
+      Llvm_vectorize.add_loop_vectorize;
+      Llvm_vectorize.add_slp_vectorize;
+      Llvm_ipo.add_strip_dead_prototypes;
+      Llvm_ipo.add_global_dce;
+      (*Llvm_scalar_opts.add_constant_propagation;*)
+      Llvm_scalar_opts.add_cfg_simplification;
+    ]
+  in
   List.iter (fun f -> f pm) opts
 
 let irgen (Ast.MainFunc func) =

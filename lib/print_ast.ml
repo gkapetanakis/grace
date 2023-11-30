@@ -66,29 +66,31 @@ let pr_param_def off enable (pd : param_def) =
 
 let pr_simple_l_value off enable (slv : simple_l_value) =
   match slv with
-  | Id { id; type_t; passed_by; frame_offset; parent_path;_ } ->
-    let str =
-      off ^ "id("
-      ^ (if passed_by = Reference then "passed by ref " else "")
-      ^ id ^ " : "
-      ^ pr_data_type "" false type_t
-      ^ "): ["
-      ^ String.concat "_" (List.rev parent_path)
-      ^ "]" ^ " offset: " ^ string_of_int frame_offset
-    in
-    pr_enable str enable
-| LString { id; type_t; _ } ->
-    let str =
-      off ^ "l_string(" ^ id ^ " : " ^ pr_data_type "" false type_t ^ ")"
-    in
-    pr_enable str enable
+  | Id { id; type_t; passed_by; frame_offset; parent_path; _ } ->
+      let str =
+        off ^ "id("
+        ^ (if passed_by = Reference then "passed by ref " else "")
+        ^ id ^ " : "
+        ^ pr_data_type "" false type_t
+        ^ "): ["
+        ^ String.concat "_" (List.rev parent_path)
+        ^ "]" ^ " offset: " ^ string_of_int frame_offset
+      in
+      pr_enable str enable
+  | LString { id; type_t; _ } ->
+      let str =
+        off ^ "l_string(" ^ id ^ " : " ^ pr_data_type "" false type_t ^ ")"
+      in
+      pr_enable str enable
 
 let rec pr_l_value off enable (lv : l_value) =
   match lv with
   | Simple slv -> pr_simple_l_value off enable slv
-  | ArrayAccess {simple_l_value=lval; exprs;_} ->
+  | ArrayAccess { simple_l_value = lval; exprs; _ } ->
       let str =
-        off ^ "array_access(" ^ pr_simple_l_value "" false lval ^ endl
+        off ^ "array_access("
+        ^ pr_simple_l_value "" false lval
+        ^ endl
         ^ String.concat ""
             (List.mapi
                (fun i e -> pr_expr (off ^ sep) (i <> List.length exprs - 1) e)
@@ -119,9 +121,9 @@ and pr_func_call off enable (fc : func_call) =
   pr_enable str enable
 
 and pr_expr off enable = function
-  | LitInt { value=lit_int; _ } ->
+  | LitInt { value = lit_int; _ } ->
       pr_enable (off ^ "lit_int(" ^ string_of_int lit_int ^ ")") enable
-  | LitChar { value=lit_char; _ } ->
+  | LitChar { value = lit_char; _ } ->
       pr_enable (off ^ "lit_char(" ^ Char.escaped lit_char ^ ")") enable
   | LValue lval -> pr_l_value off enable lval
   | EFuncCall fc -> pr_func_call off enable fc
@@ -165,7 +167,7 @@ let rec pr_cond off enable cond =
   pr_enable str enable
 
 let rec pr_block off enable block =
-  let {stmts;_} = block in
+  let { stmts; _ } = block in
   let str =
     off ^ "Block: " ^ endl
     ^ String.concat ""

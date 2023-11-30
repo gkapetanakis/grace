@@ -4,7 +4,8 @@ let tbl : Symbol.symbol_table =
   { scopes = []; table = Hashtbl.create 100; parent_path = [] }
 
 let enjoy sem node =
-  ignore (sem ()); node
+  ignore (sem ());
+  node
 
 let wrap_open_scope func_id sym_tbl = Symbol.open_scope func_id sym_tbl
 
@@ -63,7 +64,7 @@ let wrap_l_value_id loc id exprs sym_tbl =
   let l_value =
     match exprs with
     | [] -> Simple (Id l_value_id)
-    | _ -> ArrayAccess {simple_l_value = Id l_value_id; exprs; loc}
+    | _ -> ArrayAccess { simple_l_value = Id l_value_id; exprs; loc }
   in
   let sem () = Sem.sem_l_value l_value sym_tbl in
   enjoy sem l_value
@@ -75,7 +76,7 @@ let wrap_l_value_string loc str exprs sym_tbl =
   let l_value =
     match exprs with
     | [] -> Simple (LString l_value_str)
-    | _ -> ArrayAccess {simple_l_value = LString l_value_str; exprs; loc}
+    | _ -> ArrayAccess { simple_l_value = LString l_value_str; exprs; loc }
   in
   let sem () = Sem.sem_l_value l_value sym_tbl in
   enjoy sem l_value
@@ -149,14 +150,19 @@ let wrap_block2 _loc stmts =
     stmts []
 
 let wrap_block loc stmts =
-  let flattened_stmts = List.fold_right
-  (fun stmt acc ->
-    match stmt with Block b -> b.stmts @ acc | _ -> stmt :: acc)
-  stmts [] in
-  let stmts = List.fold_right (fun stmt acc ->
-    match stmt with Return _ -> [ stmt ] | _ -> stmt :: acc)
-  flattened_stmts [] in
-  { stmts; loc}
+  let flattened_stmts =
+    List.fold_right
+      (fun stmt acc ->
+        match stmt with Block b -> b.stmts @ acc | _ -> stmt :: acc)
+      stmts []
+  in
+  let stmts =
+    List.fold_right
+      (fun stmt acc ->
+        match stmt with Return _ -> [ stmt ] | _ -> stmt :: acc)
+      flattened_stmts []
+  in
+  { stmts; loc }
 
 let wrap_stmt_empty loc sym_tbl =
   let stmt : stmt = Empty loc in
@@ -220,7 +226,7 @@ let wrap_decl_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
     wrap_close_scope loc sym_tbl
   in
   enjoy sem decl
-  
+
 let wrap_def_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
   let def =
     {
