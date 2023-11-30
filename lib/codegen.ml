@@ -1,25 +1,42 @@
+(* essential objects required by llvm *)
 let context = Llvm.global_context ()
 let the_module = Llvm.create_module context "grace"
 let builder = Llvm.builder context
+
+(* llvm types that correspond to grace types *)
 let i8_t = Llvm.i8_type context
 let i32_t = Llvm.i32_type context
 let void_t = Llvm.void_type context
+
+(* llvm constants that correspond to grace constants *)
 let c8 = Llvm.const_int i8_t
 let c32 = Llvm.const_int i32_t
-let _ = Llvm_all_backends.initialize ()
-let triple = Llvm_target.Target.default_triple ()
-let _ = Llvm.set_target_triple triple the_module
-let target = Llvm_target.Target.by_triple triple
-let machine = Llvm_target.TargetMachine.create ~triple target
-let dly = Llvm_target.TargetMachine.data_layout machine
-let _ = Llvm.set_data_layout (Llvm_target.DataLayout.as_string dly) the_module
 
-let grace_runtime_lib () =
-  let func_decl (name, ret_type, arg_l) =
-    let ft = Llvm.function_type ret_type (Array.of_list arg_l) in
-    Llvm.declare_function name ft the_module |> ignore
+(* initialize llvm *)
+let _ = Llvm_all_backends.initialize ()
+
+(* architecture, vendor, operating system *)
+let triple = Llvm_target.Target.default_triple ()
+
+(* abstract target to build for *)
+let target = Llvm_target.Target.by_triple triple
+
+(* real target machine to build for *)
+let machine = Llvm_target.TargetMachine.create ~triple target
+let data_layout = Llvm_target.TargetMachine.data_layout machine
+
+(* set parameters *)
+let () =
+  Llvm.set_target_triple triple the_module;
+  Llvm.set_data_layout (Llvm_target.DataLayout.as_string data_layout) the_module
+
+(* declare the runtime library *)
+let () =
+  let declare_runtime_func (name, ret_type, args) =
+    let ft = Llvm.function_type ret_type (Array.of_list args) in
+    ignore (Llvm.declare_function name ft the_module)
   in
-  List.iter func_decl
+  List.iter declare_runtime_func
     [
       ("writeInteger", void_t, [ i32_t ]);
       ("writeChar", void_t, [ i8_t ]);
@@ -35,35 +52,36 @@ let grace_runtime_lib () =
       ("strcat", void_t, [ Llvm.pointer_type i8_t; Llvm.pointer_type i8_t ]);
     ]
 
-let scalar_to_lltype = function
+let lltype_of_scalar = function
   | Ast.Int -> i32_t
   | Ast.Char -> i8_t
   | Ast.Nothing -> void_t
 
-let type_to_lltype = function
-  | Ast.Scalar s -> scalar_to_lltype s
+let lltype_of_data_type = function
+  | Ast.Scalar s -> lltype_of_scalar s
   | Ast.Array (s, dims) ->
-      let rec aux t dims =
-        match dims with
-        | [] -> scalar_to_lltype t
-        | d :: dims -> Llvm.array_type (aux t dims) (Option.get d)
+      let rec aux s d =
+        match d with
+        | [] -> lltype_of_scalar s
+        | hd :: tl -> Llvm.array_type (aux s tl) (Option.get hd)
       in
       aux s dims
 
 (* just the var type (no pointers) *)
-let var_def_lltype (vd : Ast.var_def) = type_to_lltype vd.type_t
+let lltype_of_var_def (vd : Ast.var_def) = lltype_of_data_type vd.type_t
 
-(* by value -> parameter type (no pointer)
-   by reference -> pointer to parameter type (scalar) or pointer to parameter element type (array)
+(*
+  by value -> parameter type (no pointer)
+  by reference -> pointer to parameter type (scalar) or pointer to parameter element type (array)
 *)
-let param_def_lltype (pd : Ast.param_def) =
+let lltype_of_param_def (pd : Ast.param_def) =
   match pd.pass_by with
-  | Ast.Value -> type_to_lltype pd.type_t
+  | Ast.Value -> lltype_of_data_type pd.type_t
   | Ast.Reference -> (
       match pd.type_t with
-      | Ast.Array (t, _ :: tl) ->
-          Llvm.pointer_type (type_to_lltype (Ast.Array (t, tl)))
-      | _ -> Llvm.pointer_type (type_to_lltype pd.type_t))
+      | Ast.Array (s, _ :: tl) ->
+          Llvm.pointer_type (lltype_of_data_type (Ast.Array (s, tl)))
+      | _ -> Llvm.pointer_type (lltype_of_data_type pd.type_t))
 
 let get_parent_frame_type_ptr (func : Ast.func) =
   let parent_frame_name = Ast.get_parent_frame_name func in
@@ -92,9 +110,9 @@ let get_all_frame_type_ptrs (Ast.MainFunc main_func : Ast.program) =
 
 let gen_frame_type (func : Ast.func) =
   let parent_frame_type_ptr = get_parent_frame_type_ptr func in
-  let param_lltypes = List.map param_def_lltype func.params in
+  let param_lltypes = List.map lltype_of_param_def func.params in
   let local_var_defs, _, _ = Ast.reorganize_local_defs func.local_defs in
-  let local_var_lltypes = List.map var_def_lltype local_var_defs in
+  let local_var_lltypes = List.map lltype_of_var_def local_var_defs in
   let frame_name = Ast.get_frame_name func in
   let frame_field_types =
     Array.of_list ((parent_frame_type_ptr :: param_lltypes) @ local_var_lltypes)
@@ -339,9 +357,9 @@ and gen_stmt frame caller_path (stmt : Ast.stmt) =
 
 let gen_func_decl (func : Ast.func) =
   let parent_frame_type_ptr = get_parent_frame_type_ptr func in
-  let param_lltypes = List.map param_def_lltype func.params in
+  let param_lltypes = List.map lltype_of_param_def func.params in
   let full_params = parent_frame_type_ptr :: param_lltypes in
-  let ret_type = scalar_to_lltype func.type_t in
+  let ret_type = lltype_of_scalar func.type_t in
   let func_type = Llvm.function_type ret_type (Array.of_list full_params) in
   match Llvm.lookup_function (Ast.get_proper_func_name func) the_module with
   | None ->
@@ -360,15 +378,16 @@ let rec gen_func_def (func : Ast.func) =
   List.iter gen_func_def local_f_defs;
 
   let parent_frame_type_ptr = get_parent_frame_type_ptr func in
-  let param_lltypes = List.map param_def_lltype func.params in
+  let param_lltypes = List.map lltype_of_param_def func.params in
   let full_params = parent_frame_type_ptr :: param_lltypes in
-  let ret_type = scalar_to_lltype func.type_t in
+  let ret_type = lltype_of_scalar func.type_t in
   let func_type = Llvm.function_type ret_type (Array.of_list full_params) in
+  let func_name = Ast.get_proper_func_name func in
   let func_decl =
-    match Llvm.lookup_function (Ast.get_proper_func_name func) the_module with
+    match Llvm.lookup_function func_name the_module with
     | None ->
         Llvm.declare_function
-          (Ast.get_proper_func_name func)
+          func_name
           func_type the_module
     | Some fd -> fd
   in
@@ -461,7 +480,6 @@ let add_optimizations pass_mgr =
   List.iter (fun opt -> opt pass_mgr) optimizations
 
 let irgen (Ast.MainFunc func) enable_optimizations =
-  (*grace_runtime_lib ();*)
   gen_all_frame_types (Ast.MainFunc func);
   gen_func_def func;
   if enable_optimizations then (
@@ -470,13 +488,20 @@ let irgen (Ast.MainFunc func) enable_optimizations =
     ignore (Llvm.PassManager.run_module the_module pass_mgr));
   Llvm_analysis.assert_valid_module the_module
 
-let codegen (Ast.MainFunc main) enable_optimizations ir_outchan comp_outchan =
+let codegen (Ast.MainFunc main) enable_optimizations ~imm_outchan ~asm_outchan
+    ~obj_outchan =
   irgen (Ast.MainFunc main) enable_optimizations;
-  let ir_out = Llvm.string_of_llmodule the_module in
-  let comp_out =
+  let imm_out = Llvm.string_of_llmodule the_module in
+  let asm_out =
     Llvm.MemoryBuffer.as_string
       (Llvm_target.TargetMachine.emit_to_memory_buffer the_module
          Llvm_target.CodeGenFileType.AssemblyFile machine)
   in
-  Out_channel.output_string ir_outchan ir_out;
-  Out_channel.output_string comp_outchan comp_out
+  let obj_out =
+    Llvm.MemoryBuffer.as_string
+      (Llvm_target.TargetMachine.emit_to_memory_buffer the_module
+         Llvm_target.CodeGenFileType.ObjectFile machine)
+  in
+  Out_channel.output_string imm_outchan imm_out;
+  Out_channel.output_string asm_outchan asm_out;
+  Out_channel.output_string obj_outchan obj_out
