@@ -1,12 +1,10 @@
 ; ModuleID = 'grace'
 source_filename = "grace"
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-unknown-linux-gnu"
 
-%frame___start = type {}
-%frame___start.doSomething = type { %frame___start* }
-
-@"Hello world\0A\0A" = private unnamed_addr constant [14 x i8] c"Hello world\0A\0A\00", align 1
+%frame__main = type {}
+%frame__main.doSomething = type { %frame__main*, i8, i32, [10 x i8] }
 
 declare void @writeInteger(i32)
 
@@ -32,18 +30,38 @@ declare void @strcpy(i8*, i8*)
 
 declare void @strcat(i8*, i8*)
 
-define void @_start.doSomething(%frame___start* %0) {
+define void @main.doSomething(%frame__main* %0) {
 entry:
-  %frame_struct = alloca %frame___start.doSomething, align 8
-  %param_ptr = getelementptr inbounds %frame___start.doSomething, %frame___start.doSomething* %frame_struct, i32 0, i32 0
-  store %frame___start* %0, %frame___start** %param_ptr, align 8
-  call void @writeString(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @"Hello world\0A\0A", i32 0, i32 0))
+  %frame_struct = alloca %frame__main.doSomething, align 8
+  %param_ptr = getelementptr inbounds %frame__main.doSomething, %frame__main.doSomething* %frame_struct, i32 0, i32 0
+  store %frame__main* %0, %frame__main** %param_ptr, align 8
+  %func_call_readChar = call i8 @readChar()
+  %element_ptr = getelementptr inbounds %frame__main.doSomething, %frame__main.doSomething* %frame_struct, i32 0, i32 1
+  store i8 %func_call_readChar, i8* %element_ptr, align 1
+  %func_call_readInteger = call i32 @readInteger()
+  %element_ptr1 = getelementptr inbounds %frame__main.doSomething, %frame__main.doSomething* %frame_struct, i32 0, i32 2
+  store i32 %func_call_readInteger, i32* %element_ptr1, align 4
+  %element_ptr2 = getelementptr inbounds %frame__main.doSomething, %frame__main.doSomething* %frame_struct, i32 0, i32 3
+  %array_ptr = getelementptr [10 x i8], [10 x i8]* %element_ptr2, i32 0, i32 0
+  call void @readString(i32 10, i8* %array_ptr)
+  %element_ptr3 = getelementptr inbounds %frame__main.doSomething, %frame__main.doSomething* %frame_struct, i32 0, i32 1
+  %l_value = load i8, i8* %element_ptr3, align 1
+  call void @writeChar(i8 %l_value)
+  call void @writeChar(i8 10)
+  %element_ptr4 = getelementptr inbounds %frame__main.doSomething, %frame__main.doSomething* %frame_struct, i32 0, i32 2
+  %l_value5 = load i32, i32* %element_ptr4, align 4
+  call void @writeInteger(i32 %l_value5)
+  call void @writeChar(i8 10)
+  %element_ptr6 = getelementptr inbounds %frame__main.doSomething, %frame__main.doSomething* %frame_struct, i32 0, i32 3
+  %array_ptr7 = getelementptr [10 x i8], [10 x i8]* %element_ptr6, i32 0, i32 0
+  call void @writeString(i8* %array_ptr7)
+  call void @writeChar(i8 10)
   ret void
 }
 
-define i32 @_start() {
+define i32 @main() {
 entry:
-  %frame_struct = alloca %frame___start, align 8
-  call void @_start.doSomething(%frame___start* %frame_struct)
+  %frame_struct = alloca %frame__main, align 8
+  call void @main.doSomething(%frame__main* %frame_struct)
   ret i32 0
 }

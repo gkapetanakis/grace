@@ -1,5 +1,16 @@
-
 fun doSomething() : nothing
+  var c: char;
+  var i: int;
+  var s: char[10];
 {
-    writeString("Hello world\n\n");
+  c <- readChar();
+  i <- readInteger();
+  readString(10, s);
+
+  writeChar(c);
+  writeChar('\n');
+  writeInteger(i);
+  writeChar('\n');
+  writeString(s);
+  writeChar('\n');
 }

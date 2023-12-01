@@ -1,43 +1,59 @@
 	.text
 	.file	"grace"
-	.globl	_start.doSomething
-	.p2align	4, 0x90
-	.type	_start.doSomething,@function
-_start.doSomething:
+	.globl	main.doSomething
+	.p2align	2
+	.type	main.doSomething,@function
+main.doSomething:
 	.cfi_startproc
-	pushq	%rax
-	.cfi_def_cfa_offset 16
-	movq	%rdi, (%rsp)
-	movl	$".LHello world\n\n", %edi
-	callq	writeString@PLT
-	popq	%rax
-	.cfi_def_cfa_offset 8
-	retq
+	sub	sp, sp, #48
+	stp	x30, x19, [sp, #32]
+	.cfi_def_cfa_offset 48
+	.cfi_offset w19, -8
+	.cfi_offset w30, -16
+	str	x0, [sp]
+	bl	readChar
+	strb	w0, [sp, #8]
+	bl	readInteger
+	mov	x8, sp
+	str	w0, [sp, #12]
+	add	x19, x8, #16
+	mov	w0, #10
+	mov	x1, x19
+	bl	readString
+	ldrb	w0, [sp, #8]
+	bl	writeChar
+	mov	w0, #10
+	bl	writeChar
+	ldr	w0, [sp, #12]
+	bl	writeInteger
+	mov	w0, #10
+	bl	writeChar
+	mov	x0, x19
+	bl	writeString
+	mov	w0, #10
+	bl	writeChar
+	ldp	x30, x19, [sp, #32]
+	add	sp, sp, #48
+	ret
 .Lfunc_end0:
-	.size	_start.doSomething, .Lfunc_end0-_start.doSomething
+	.size	main.doSomething, .Lfunc_end0-main.doSomething
 	.cfi_endproc
 
-	.globl	_start
-	.p2align	4, 0x90
-	.type	_start,@function
-_start:
+	.globl	main
+	.p2align	2
+	.type	main,@function
+main:
 	.cfi_startproc
-	pushq	%rax
+	str	x30, [sp, #-16]!
 	.cfi_def_cfa_offset 16
-	movq	%rsp, %rdi
-	callq	_start.doSomething@PLT
-	xorl	%eax, %eax
-	popq	%rcx
-	.cfi_def_cfa_offset 8
-	retq
+	.cfi_offset w30, -16
+	add	x0, sp, #8
+	bl	main.doSomething
+	mov	w0, wzr
+	ldr	x30, [sp], #16
+	ret
 .Lfunc_end1:
-	.size	_start, .Lfunc_end1-_start
+	.size	main, .Lfunc_end1-main
 	.cfi_endproc
-
-	.type	".LHello world\n\n",@object
-	.section	.rodata.str1.1,"aMS",@progbits,1
-".LHello world\n\n":
-	.asciz	"Hello world\n\n"
-	.size	".LHello world\n\n", 14
 
 	.section	".note.GNU-stack","",@progbits

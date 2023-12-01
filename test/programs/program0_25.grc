@@ -1,0 +1,23 @@
+fun f(): nothing
+  var i: int;
+  fun input(ref i: int): nothing
+    fun aux(ref i: int): nothing
+    {
+      i <- readInteger();
+    } 
+  {
+    aux(i);
+  }
+{
+  input(i);
+  while i # 0 do {
+    if i < 5 then
+      writeString("Less");
+    else if i # 5 then
+      writeString("More");
+    else
+      writeString("Equal");
+    writeChar('\n');
+    input(i);
+  }
+}
