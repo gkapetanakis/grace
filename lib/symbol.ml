@@ -2,6 +2,7 @@ open Error
 open Ast
 
 let start = 1
+let global_scope_name = "main"
 
 type entry_type =
   | Variable of var_def ref

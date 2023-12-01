@@ -173,7 +173,7 @@ let local_def :=
     { wrap_local_def_var vd_l }
 
 let program :=
-  | midrule({ wrap_open_scope "_start" tbl }); declare_runtime; fd = func_def; EOF;
+  | midrule({ wrap_open_scope Symbol.global_scope_name tbl }); declare_runtime; fd = func_def; EOF;
     { Symbol.remove_runtime tbl; wrap_close_scope $loc tbl; wrap_program fd tbl }
 
 let declare_runtime :=

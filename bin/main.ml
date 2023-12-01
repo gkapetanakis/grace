@@ -6,7 +6,7 @@ let dev_null =
   else if Sys.os_type = "Win32" || Sys.os_type = "Cygwin" then "NUL"
   else failwith ("Unsupported operating system: " ^ Sys.os_type)
 
-let linker = if Sys.os_type = "Windows" then "link.exe" else "ld"
+let linker = "clang-14"
 
 (* input flags and filename *)
 let optimizations = ref false
@@ -46,6 +46,11 @@ let print_help_message () =
 let remove_extension filename =
   let final_dot_index = String.rindex filename '.' in
   String.sub filename 0 final_dot_index
+
+let remove_path filename =
+  let final_slash_index = String.rindex filename '/' in
+  String.sub filename (final_slash_index + 1)
+    (String.length filename - final_slash_index - 1)
 
 let process_arguments () =
   let argv = Sys.argv in
@@ -93,20 +98,36 @@ let () =
   let asm_outchan = open_asm_out_channel () in
   let obj_outchan = open_obj_out_channel () in
   let lexbuf = Lexing.from_channel inchan in
-  let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
-  Grace_lib.Codegen.codegen ast !optimizations ~imm_outchan ~asm_outchan
-    ~obj_outchan;
-  close_in inchan;
-  close_out imm_outchan;
-  close_out asm_outchan;
-  close_out obj_outchan;
-  let runtime_path = "runtime_lib/" in
-  let runtime_name = "grace" in
-  if (not !asm_stdin_stdout) && not !imm_stdin_stdout then
-    let exit_code =
-      Sys.command
-        (linker ^ " -o " ^ remove_extension !filename ^ ".exe " ^ "-L"
-       ^ runtime_path ^ " " ^ "-l " ^ runtime_name ^ " "
-       ^ remove_extension !filename ^ ".o")
-    in
-    exit exit_code
+  try
+    let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
+    Grace_lib.Codegen.codegen ast !optimizations ~imm_outchan ~asm_outchan
+      ~obj_outchan;
+    close_in inchan;
+    close_out imm_outchan;
+    close_out asm_outchan;
+    close_out obj_outchan;
+    let runtime_path = "runtime_lib/" in
+    let runtime_name = "grace" in
+    if (not !asm_stdin_stdout) && not !imm_stdin_stdout then
+      let exit_code =
+        Sys.command
+          (Printf.sprintf "%s -o executables/%s.exe %s.o -L %s -l %s" linker
+             (remove_path (remove_extension !filename))
+             (remove_extension !filename)
+             runtime_path runtime_name)
+      in
+      exit exit_code
+  with
+  | Grace_lib.Error.Lexing_error (loc, msg) ->
+      Grace_lib.Error.pr_lexing_error (loc, msg)
+  | Grace_lib.Parser.Error ->
+      (* built-in Menhir error... *)
+      Grace_lib.Error.pr_parser_error
+        ( (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf),
+          "Syntax error" )
+  | Grace_lib.Error.Semantic_error (loc, msg) ->
+      Grace_lib.Error.pr_semantic_error (loc, msg)
+  | Grace_lib.Error.Symbol_table_error (loc, msg) ->
+      Grace_lib.Error.pr_symbol_table_error (loc, msg)
+  | Grace_lib.Error.Internal_compiler_error msg ->
+      Grace_lib.Error.pr_internal_compiler_error msg

@@ -2,4 +2,8 @@ _build
 .devcontainer
 .DS_Store
 .vscode
-pr.ll
+**/*.exe
+**/*.asm
+**/*.imm
+**/*.o
+**/*.s

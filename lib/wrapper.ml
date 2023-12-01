@@ -272,7 +272,7 @@ let wrap_local_def_var (vd_l : var_def list) =
 let insert_virtual_main (func : func) =
   let main_func : func =
     {
-      id = "_start";
+      id = Symbol.global_scope_name;
       params = [];
       type_t = Int;
       local_defs = [ FuncDef func ];
