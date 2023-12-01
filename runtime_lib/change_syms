@@ -1,0 +1,5 @@
+_strcat strcat
+_strcmp strcmp
+_strcpy strcpy
+_strlen strlen
+
