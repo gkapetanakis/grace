@@ -269,7 +269,43 @@ let wrap_local_def_fdecl (func : func) = [ FuncDecl func ]
 let wrap_local_def_var (vd_l : var_def list) =
   List.map (fun vd -> VarDef vd) vd_l
 
+let insert_virtual_main (func : func) =
+  let main_func : func =
+    {
+      id = "_start";
+      params = [];
+      type_t = Int;
+      local_defs = [ FuncDef func ];
+      body =
+        Some
+          {
+            stmts =
+              [
+                SFuncCall
+                  {
+                    id = func.id;
+                    args = [];
+                    type_t = func.type_t;
+                    callee_path = func.parent_path;
+                    caller_path = [];
+                    loc = func.loc;
+                  };
+                Return
+                  {
+                    expr_o = Some (LitInt { value = 0; loc = func.loc });
+                    loc = func.loc;
+                  };
+              ];
+            loc = func.loc;
+          };
+      loc = func.loc;
+      parent_path = [];
+      (* doesn't need global or whatever at the start of its name *)
+      status = Defined;
+    }
+  in
+  main_func
+
 let wrap_program (func : func) sym_tbl =
-  let program = MainFunc func in
-  let sem () = Sem.sem_program program sym_tbl in
-  enjoy sem program
+  let sem () = Sem.sem_program func sym_tbl in
+  enjoy sem (MainFunc (insert_virtual_main func))

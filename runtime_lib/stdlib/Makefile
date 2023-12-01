@@ -1,7 +1,7 @@
 SRC=$(wildcard *.c)
 OBJ=$(SRC:.c=.o)
 
-CC=clang-16
+CC=clang-14
 CFLAGS=-Wall -O3
 
 lib: $(OBJ)

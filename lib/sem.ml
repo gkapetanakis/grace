@@ -238,7 +238,9 @@ let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
 
 and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
   match lookup_all func_call.id sym_tbl with
-  | None -> raise (Semantic_error (func_call.loc, "Function not defined"))
+  | None ->
+      raise
+        (Semantic_error (func_call.loc, "Function not defined " ^ func_call.id))
   | Some { type_t; _ } -> (
       match type_t with
       | Function fdr ->
@@ -359,12 +361,11 @@ let sem_func_def (func : Ast.func) (sym_tbl : symbol_table) =
 let ins_func_def (func : Ast.func) (sym_tbl : symbol_table) =
   insert func.loc func.id (Function (ref func)) sym_tbl
 
-let sem_program (program : Ast.program) (sym_tbl : symbol_table) =
-  let main = match program with MainFunc f -> f in
-  if List.length main.params <> 0 then
-    raise (Semantic_error (main.loc, "Main function cannot have parameters"))
-  else if main.type_t <> Nothing then
-    raise (Semantic_error (main.loc, "Main function cannot have return type"))
+let sem_program (func : Ast.func) (sym_tbl : symbol_table) =
+  if List.length func.params <> 0 then
+    raise (Semantic_error (func.loc, "Main function cannot have parameters"))
+  else if func.type_t <> Nothing then
+    raise (Semantic_error (func.loc, "Main function cannot have return type"))
   else
     (* check for any lingering things that might be left behind from parsing... *)
     Hashtbl.iter
@@ -389,4 +390,4 @@ let sem_program (program : Ast.program) (sym_tbl : symbol_table) =
               (Symbol_table_error
                  (!p.loc, "Lingering parameter definition " ^ !p.id)))
       sym_tbl.table;
-  program
+  func

@@ -1,0 +1,66 @@
+; ModuleID = 'grace'
+source_filename = "grace"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+%frame___start = type {}
+%frame___start.main = type { %frame___start*, i32, i8, [5 x i32], [2 x [3 x i8]], [2 x [3 x i8]] }
+
+declare void @writeInteger(i32)
+
+declare void @writeChar(i8)
+
+declare void @writeString(i8*)
+
+declare i32 @readInteger()
+
+declare i8 @readChar()
+
+declare void @readString(i32, i8*)
+
+declare i32 @ascii(i8)
+
+declare i8 @chr(i32)
+
+declare i32 @strlen(i8*)
+
+declare i32 @strcmp(i8*, i8*)
+
+declare void @strcpy(i8*, i8*)
+
+declare void @strcat(i8*, i8*)
+
+define void @_start.main(%frame___start* %0) {
+entry:
+  %frame_struct = alloca %frame___start.main, align 8
+  %param_ptr = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 0
+  store %frame___start* %0, %frame___start** %param_ptr, align 8
+  %element_ptr = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 1
+  store i32 5, i32* %element_ptr, align 4
+  %element_ptr1 = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 2
+  store i8 97, i8* %element_ptr1, align 1
+  %element_ptr2 = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 1
+  %l_value = load i32, i32* %element_ptr2, align 4
+  %element_ptr3 = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 3
+  %array_access = getelementptr [5 x i32], [5 x i32]* %element_ptr3, i32 0, i32 0
+  store i32 %l_value, i32* %array_access, align 4
+  %element_ptr4 = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 2
+  %l_value5 = load i8, i8* %element_ptr4, align 1
+  %element_ptr6 = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 4
+  %array_access7 = getelementptr [2 x [3 x i8]], [2 x [3 x i8]]* %element_ptr6, i32 0, i32 0, i32 1
+  store i8 %l_value5, i8* %array_access7, align 1
+  %element_ptr8 = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 4
+  %array_access9 = getelementptr [2 x [3 x i8]], [2 x [3 x i8]]* %element_ptr8, i32 0, i32 0, i32 1
+  %l_value10 = load i8, i8* %array_access9, align 1
+  %element_ptr11 = getelementptr inbounds %frame___start.main, %frame___start.main* %frame_struct, i32 0, i32 5
+  %array_access12 = getelementptr [2 x [3 x i8]], [2 x [3 x i8]]* %element_ptr11, i32 0, i32 0, i32 2
+  store i8 %l_value10, i8* %array_access12, align 1
+  ret void
+}
+
+define i32 @_start() {
+entry:
+  %frame_struct = alloca %frame___start, align 8
+  call void @_start.main(%frame___start* %frame_struct)
+  ret i32 0
+}

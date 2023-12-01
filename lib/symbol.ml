@@ -86,3 +86,234 @@ let close_scope loc (sym_tbl : symbol_table) =
       match sym_tbl.parent_path with
       | _ :: t -> sym_tbl.parent_path <- t
       | _ -> ())
+
+let declare_function
+    ( (id : string),
+      (params : param_def list),
+      (type_t : ret_type),
+      (loc : loc),
+      (sym_tbl : symbol_table) ) =
+  let func_decl =
+    {
+      id;
+      params;
+      type_t;
+      local_defs = [];
+      body = None;
+      loc;
+      parent_path = [];
+      status = Declared;
+    }
+  in
+  let entry_type = Function (ref func_decl) in
+  insert loc id entry_type sym_tbl
+
+let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
+  let runtime_lib =
+    [
+      ("readChar", [], Char, loc, sym_tbl);
+      ("readInteger", [], Int, loc, sym_tbl);
+      ( "readString",
+        [
+          {
+            id = "n";
+            type_t = Scalar Int;
+            pass_by = Value;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+          {
+            id = "s";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 2;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Nothing,
+        loc,
+        sym_tbl );
+      ( "writeChar",
+        [
+          {
+            id = "c";
+            type_t = Scalar Char;
+            pass_by = Value;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Nothing,
+        loc,
+        sym_tbl );
+      ( "writeInteger",
+        [
+          {
+            id = "i";
+            type_t = Scalar Int;
+            pass_by = Value;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Nothing,
+        loc,
+        sym_tbl );
+      ( "writeString",
+        [
+          {
+            id = "s";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 1;
+            parent_path = [ "writeString" ];
+            loc;
+          };
+        ],
+        Nothing,
+        loc,
+        sym_tbl );
+      ( "ascii",
+        [
+          {
+            id = "c";
+            type_t = Scalar Char;
+            pass_by = Value;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Int,
+        loc,
+        sym_tbl );
+      ( "chr",
+        [
+          {
+            id = "i";
+            type_t = Scalar Int;
+            pass_by = Value;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Char,
+        loc,
+        sym_tbl );
+      ( "strcat",
+        [
+          {
+            id = "trg";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+          {
+            id = "src";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 2;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Nothing,
+        loc,
+        sym_tbl );
+      ( "strcmp",
+        [
+          {
+            id = "s1";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+          {
+            id = "s2";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 2;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Int,
+        loc,
+        sym_tbl );
+      ( "strcpy",
+        [
+          {
+            id = "trg";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+          {
+            id = "src";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 2;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Nothing,
+        loc,
+        sym_tbl );
+      ( "strlen",
+        [
+          {
+            id = "s";
+            type_t = Array (Char, [ None ]);
+            pass_by = Reference;
+            frame_offset = 1;
+            parent_path = [];
+            loc;
+          };
+        ],
+        Int,
+        loc,
+        sym_tbl );
+    ]
+  in
+  List.iter (fun func -> declare_function func) runtime_lib
+
+let remove_runtime (sym_tbl : symbol_table) =
+  let runtime_lib =
+    [
+      "readChar";
+      "readInteger";
+      "readString";
+      "writeChar";
+      "writeInteger";
+      "writeString";
+      "ascii";
+      "chr";
+      "strcat";
+      "strcmp";
+      "strcpy";
+      "strlen";
+    ]
+  in
+  List.iter (fun id -> Hashtbl.remove sym_tbl.table id) runtime_lib;
+  match sym_tbl.scopes with
+  | [] ->
+      raise
+        (Internal_compiler_error
+           "Tried to remove runtime from empty symbol table")
+  | hd :: _ ->
+      hd.entries <-
+        List.filter
+          (fun entry -> not (List.mem entry.id runtime_lib))
+          hd.entries

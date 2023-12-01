@@ -172,15 +172,20 @@ let reorganize_local_defs (local_defs : local_def list) =
   (List.rev vars, List.rev decls, List.rev funcs)
 
 let get_parent_name (func : func) =
-  String.concat "." (List.rev func.parent_path)
+  let parent_path = List.filter (fun x -> x <> "") func.parent_path in
+  String.concat "." (List.rev parent_path)
 
-let get_func_name (func : func) = get_parent_name func ^ "." ^ func.id
+let get_func_name (func : func) =
+  let full_path = [ get_parent_name func; func.id ] in
+  let full_path = List.filter (fun x -> x <> "") full_path in
+  String.concat "." full_path
+
 let get_parent_frame_name (func : func) = "frame__" ^ get_parent_name func
 let get_frame_name (func : func) = "frame__" ^ get_func_name func
-let get_proper_parent_func_name (func : func) = "func__" ^ get_parent_name func
-let get_proper_func_name (func : func) = "func__" ^ get_func_name func
+let get_proper_parent_func_name (func : func) = get_parent_name func
+let get_proper_func_name (func : func) = get_func_name func
 
 let get_proper_func_call_name (func_call : func_call) =
-  "func__"
-  ^ String.concat "." (List.rev func_call.callee_path)
-  ^ "." ^ func_call.id
+  let full_path = List.rev func_call.callee_path @ [ func_call.id ] in
+  let full_path = List.filter (fun x -> x <> "") full_path in
+  String.concat "." full_path

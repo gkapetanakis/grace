@@ -86,8 +86,8 @@ let lltype_of_param_def (pd : Ast.param_def) =
 let get_parent_frame_type_ptr (func : Ast.func) =
   let parent_frame_name = Ast.get_parent_frame_name func in
   match Llvm.type_by_name the_module parent_frame_name with
-  | Some frame -> Llvm.pointer_type frame
-  | None -> Llvm.pointer_type void_t
+  | Some frame -> Some (Llvm.pointer_type frame)
+  | None -> None
 
 let get_frame_type_ptr (func : Ast.func) =
   let frame_name = Ast.get_frame_name func in
@@ -109,13 +109,15 @@ let get_all_frame_type_ptrs (Ast.MainFunc main_func : Ast.program) =
   aux [] [ [ main_func ] ]
 
 let gen_frame_type (func : Ast.func) =
-  let parent_frame_type_ptr = get_parent_frame_type_ptr func in
+  let parent_frame_type_ptr =
+    match get_parent_frame_type_ptr func with Some ptr -> [ ptr ] | None -> []
+  in
   let param_lltypes = List.map lltype_of_param_def func.params in
   let local_var_defs, _, _ = Ast.reorganize_local_defs func.local_defs in
   let local_var_lltypes = List.map lltype_of_var_def local_var_defs in
   let frame_name = Ast.get_frame_name func in
   let frame_field_types =
-    Array.of_list ((parent_frame_type_ptr :: param_lltypes) @ local_var_lltypes)
+    Array.of_list (parent_frame_type_ptr @ param_lltypes @ local_var_lltypes)
   in
   let frame_type = Llvm.named_struct_type context frame_name in
   Llvm.struct_set_body frame_type frame_field_types false
@@ -223,12 +225,17 @@ and gen_func_call frame caller_path (func_call : Ast.func_call) =
     | None ->
         raise
           (Error.Internal_compiler_error
-             ("Function declaration not found: " ^ func_call.id))
+             ("Function declaration not found: "
+             ^ Ast.get_proper_func_call_name func_call))
   in
   let func_args = List.map (gen_func_arg frame caller_path) func_call.args in
-  let hops = List.length caller_path - List.length func_call.callee_path in
-  let frame_ptr = get_frame_ptr frame hops in
-  let func_args = frame_ptr :: func_args in
+  let frame_ptr =
+    if Array.length (Llvm.params func_decl) = List.length func_call.args then []
+    else
+      let hops = List.length caller_path - List.length func_call.callee_path in
+      [ get_frame_ptr frame hops ]
+  in
+  let func_args = frame_ptr @ func_args in
   let ll_local_var_name =
     if func_call.type_t = Ast.Nothing then ""
       (* void returns shouldn't be named *)
@@ -356,9 +363,11 @@ and gen_stmt frame caller_path (stmt : Ast.stmt) =
           | _ -> ignore (Llvm.build_ret ret_val builder)))
 
 let gen_func_decl (func : Ast.func) =
-  let parent_frame_type_ptr = get_parent_frame_type_ptr func in
+  let parent_frame_type_ptr =
+    match get_parent_frame_type_ptr func with Some ptr -> [ ptr ] | None -> []
+  in
   let param_lltypes = List.map lltype_of_param_def func.params in
-  let full_params = parent_frame_type_ptr :: param_lltypes in
+  let full_params = parent_frame_type_ptr @ param_lltypes in
   let ret_type = lltype_of_scalar func.type_t in
   let func_type = Llvm.function_type ret_type (Array.of_list full_params) in
   match Llvm.lookup_function (Ast.get_proper_func_name func) the_module with
@@ -377,18 +386,17 @@ let rec gen_func_def (func : Ast.func) =
   List.iter gen_func_decl local_f_decls;
   List.iter gen_func_def local_f_defs;
 
-  let parent_frame_type_ptr = get_parent_frame_type_ptr func in
+  let parent_frame_type_ptr =
+    match get_parent_frame_type_ptr func with Some ptr -> [ ptr ] | None -> []
+  in
   let param_lltypes = List.map lltype_of_param_def func.params in
-  let full_params = parent_frame_type_ptr :: param_lltypes in
+  let full_params = parent_frame_type_ptr @ param_lltypes in
   let ret_type = lltype_of_scalar func.type_t in
   let func_type = Llvm.function_type ret_type (Array.of_list full_params) in
   let func_name = Ast.get_proper_func_name func in
   let func_decl =
     match Llvm.lookup_function func_name the_module with
-    | None ->
-        Llvm.declare_function
-          func_name
-          func_type the_module
+    | None -> Llvm.declare_function func_name func_type the_module
     | Some fd -> fd
   in
   let func_block = Llvm.append_block context "entry" func_decl in
@@ -421,6 +429,8 @@ let rec gen_func_def (func : Ast.func) =
       )
   | Some _ -> ()
 
+let gen_main (Ast.MainFunc main_func : Ast.program) = gen_func_def main_func
+
 let add_optimizations pass_mgr =
   let optimizations =
     [
@@ -432,7 +442,6 @@ let add_optimizations pass_mgr =
       (* Llvm_ipo.add_always_inliner;* // let's not use this one *)
       Llvm_ipo.add_global_dce;
       Llvm_ipo.add_global_optimizer;
-      (* Llvm_ipo.add_ipc_propagation; // might work with later versions of the bindings *)
       Llvm_ipo.add_prune_eh;
       Llvm_ipo.add_ipsccp;
       (* Llvm_ipo.add_internalize ~all_but_main:true; // not sure if this is useful *)
@@ -464,7 +473,6 @@ let add_optimizations pass_mgr =
       Llvm_scalar_opts.add_scalar_repl_aggregation;
       Llvm_scalar_opts.add_lib_call_simplification;
       Llvm_scalar_opts.add_tail_call_elimination;
-      (* Llvm_scalar_opts.add_constant_propagation; // might work with later versions of the bindings *)
       Llvm_scalar_opts.add_memory_to_register_demotion;
       Llvm_scalar_opts.add_verifier;
       Llvm_scalar_opts.add_correlated_value_propagation;
@@ -479,9 +487,9 @@ let add_optimizations pass_mgr =
   in
   List.iter (fun opt -> opt pass_mgr) optimizations
 
-let irgen (Ast.MainFunc func) enable_optimizations =
-  gen_all_frame_types (Ast.MainFunc func);
-  gen_func_def func;
+let irgen main_func enable_optimizations =
+  gen_all_frame_types main_func;
+  gen_main main_func;
   if enable_optimizations then (
     let pass_mgr = Llvm.PassManager.create () in
     add_optimizations pass_mgr;

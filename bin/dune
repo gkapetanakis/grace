@@ -2,3 +2,8 @@
  (public_name gracec)
  (name main)
  (libraries grace_lib))
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A))))

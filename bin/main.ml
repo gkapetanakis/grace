@@ -100,10 +100,13 @@ let () =
   close_out imm_outchan;
   close_out asm_outchan;
   close_out obj_outchan;
+  let runtime_path = "runtime_lib/" in
+  let runtime_name = "grace" in
   if (not !asm_stdin_stdout) && not !imm_stdin_stdout then
     let exit_code =
       Sys.command
-        (linker ^ " -o " ^ remove_extension !filename ^ " "
+        (linker ^ " -o " ^ remove_extension !filename ^ ".exe " ^ "-L"
+       ^ runtime_path ^ " " ^ "-l " ^ runtime_name ^ " "
        ^ remove_extension !filename ^ ".o")
     in
     exit exit_code

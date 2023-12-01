@@ -1,0 +1,5 @@
+
+fun doSomething() : nothing
+{
+    writeString("Hello world\n\n");
+}
