@@ -111,7 +111,7 @@ let () =
     if (not !asm_stdin_stdout) && not !imm_stdin_stdout then
       let exit_code =
         Sys.command
-          (Printf.sprintf "%s -o executables/%s.exe %s.o -L %s -l %s" linker
+          (Printf.sprintf "%s -no-pie -o executables/%s.exe %s.o -L %s -l %s" linker
              (remove_path (remove_extension !filename))
              (remove_extension !filename)
              runtime_path runtime_name)

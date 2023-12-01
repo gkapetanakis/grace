@@ -24,4 +24,7 @@ clean:
 distclean: clean
 	rm -f *.a
 
-.PHONY: all clean
+cleanextras:
+	rm -f $(ASM_FILES) $(OBJ_FILES)
+
+.PHONY: all clean cleanextras
