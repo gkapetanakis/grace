@@ -8,9 +8,9 @@
 (source
  (github username/reponame))
 
-(authors "Author Name")
+(authors "Dimitrios Georgousis" "Georgios-Alexios Kapetanakis")
 
-(maintainers "Maintainer Name")
+(maintainers "")
 
 (license LICENSE)
 
@@ -18,8 +18,8 @@
 
 (package
  (name grace)
- (synopsis "A short synopsis")
- (description "A longer description")
+ (synopsis "A compiler project for NTUA Compilers course")
+ (description "A compiler project for NTUA Compilers course. We build a compiler for the 'Grace' programming language using OCaml and related tools.")
  (depends ocaml dune)
  (tags
   (topics "to describe" your project)))
