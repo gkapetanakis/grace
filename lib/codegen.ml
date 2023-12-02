@@ -83,7 +83,7 @@ let lltype_of_param_def (pd : Ast.param_def) =
           Llvm.pointer_type (lltype_of_data_type (Ast.Array (s, tl)))
       | _ -> Llvm.pointer_type (lltype_of_data_type pd.type_t))
 
-let get_parent_frame_type_ptr (func : Ast.func) =
+let get_parent_frame_type_ptr_option (func : Ast.func) =
   let parent_frame_name = Ast.get_parent_frame_name func in
   match Llvm.type_by_name the_module parent_frame_name with
   | Some frame -> Some (Llvm.pointer_type frame)
@@ -110,7 +110,7 @@ let get_all_frame_type_ptrs (Ast.MainFunc main_func : Ast.program) =
 
 let gen_frame_type (func : Ast.func) =
   let parent_frame_type_ptr =
-    match get_parent_frame_type_ptr func with Some ptr -> [ ptr ] | None -> []
+    match get_parent_frame_type_ptr_option func with Some ptr -> [ ptr ] | None -> []
   in
   let param_lltypes = List.map lltype_of_param_def func.params in
   let local_var_defs, _, _ = Ast.reorganize_local_defs func.local_defs in
@@ -364,7 +364,7 @@ and gen_stmt frame caller_path (stmt : Ast.stmt) =
 
 let gen_func_decl (func : Ast.func) =
   let parent_frame_type_ptr =
-    match get_parent_frame_type_ptr func with Some ptr -> [ ptr ] | None -> []
+    match get_parent_frame_type_ptr_option func with Some ptr -> [ ptr ] | None -> []
   in
   let param_lltypes = List.map lltype_of_param_def func.params in
   let full_params = parent_frame_type_ptr @ param_lltypes in
@@ -387,7 +387,7 @@ let rec gen_func_def (func : Ast.func) =
   List.iter gen_func_def local_f_defs;
 
   let parent_frame_type_ptr =
-    match get_parent_frame_type_ptr func with Some ptr -> [ ptr ] | None -> []
+    match get_parent_frame_type_ptr_option func with Some ptr -> [ ptr ] | None -> []
   in
   let param_lltypes = List.map lltype_of_param_def func.params in
   let full_params = parent_frame_type_ptr @ param_lltypes in
