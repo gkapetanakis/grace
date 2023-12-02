@@ -1,5 +1,6 @@
 (* debug flag *)
 let debug = true
+let compiler_name = ref String.empty
 
 let dev_null =
   if Sys.os_type = "Unix" then "/dev/null"
@@ -26,14 +27,15 @@ let print_debug_info () =
   [@@ocamlformat "disable"]
 
 (* helper functions *)
+
 let handle_incorrect_call () =
-  print_endline "Usage: gracec [Options] file";
-  print_endline "For more info, try: gracec --help";
+  print_endline ("Usage: "^ !compiler_name ^ " [Options] file");
+  print_endline ("For more info, try: " ^ !compiler_name ^ " --help");
   exit 1
   [@@ocamlformat "disable"]
 
 let print_help_message () =
-  print_endline "Usage: gracec [Options] filename";
+  print_endline ("Usage: " ^ !compiler_name ^ " [Options] filename");
   print_newline ();
   print_endline "Options:";
   print_endline "  -O  Enable optimizations.";
@@ -55,6 +57,7 @@ let remove_path filename =
 let process_arguments () =
   let argv = Sys.argv in
   let argc = Array.length Sys.argv in
+  compiler_name := argv.(0);
   for i = 1 to argc - 1 do
     match argv.(i) with
     | "--help" ->
@@ -98,6 +101,8 @@ let () =
   let asm_outchan = open_asm_out_channel () in
   let obj_outchan = open_obj_out_channel () in
   let lexbuf = Lexing.from_channel inchan in
+  (if !filename = String.empty then filename := "stdin");
+  Lexing.set_filename lexbuf !filename;
   try
     let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
     Grace_lib.Codegen.codegen ast !optimizations ~imm_outchan ~asm_outchan
@@ -111,8 +116,9 @@ let () =
     if (not !asm_stdin_stdout) && not !imm_stdin_stdout then
       let exit_code =
         Sys.command
-          (Printf.sprintf "%s -no-pie -o executables/%s.exe %s.o -L %s -l %s" linker
-             (remove_path (remove_extension !filename))
+          (Printf.sprintf "%s -no-pie -o %s.exe %s.o -L %s -l %s" linker
+             (*(remove_path (remove_extension !filename))*)
+             (remove_extension !filename)
              (remove_extension !filename)
              runtime_path runtime_name)
       in
