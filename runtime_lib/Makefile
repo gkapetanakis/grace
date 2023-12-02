@@ -19,12 +19,9 @@ $(LIBRARY_NAME): $(OBJ_FILES)
 	ar rcs $@ $^
 
 clean:
-	rm -f $(ASM_FILES) $(OBJ_FILES) $(LIBRARY_NAME)
+	rm -f $(ASM_FILES) $(OBJ_FILES)
 
 distclean: clean
 	rm -f *.a
-
-cleanextras:
-	rm -f $(ASM_FILES) $(OBJ_FILES)
 
 .PHONY: all clean cleanextras
