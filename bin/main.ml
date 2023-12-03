@@ -105,8 +105,10 @@ let () =
   Lexing.set_filename lexbuf !filename;
   try
     let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
-    Grace_lib.Codegen.codegen ast !optimizations ~imm_outchan ~asm_outchan
-      ~obj_outchan;
+    Grace_lib.Codegen.irgen ast !optimizations;
+    Grace_lib.Codegen.codegen_imm imm_outchan;
+    Grace_lib.Codegen.codegen_asm asm_outchan;
+    Grace_lib.Codegen.codegen_obj obj_outchan;
     close_in inchan;
     close_out imm_outchan;
     close_out asm_outchan;

@@ -550,20 +550,22 @@ let irgen main_func enable_optimizations =
     ignore (Llvm.PassManager.run_module the_module pass_mgr));
   Llvm_analysis.assert_valid_module the_module
 
-let codegen (Ast.MainFunc main) enable_optimizations ~imm_outchan ~asm_outchan
-    ~obj_outchan =
-  irgen (Ast.MainFunc main) enable_optimizations;
-  let imm_out = Llvm.string_of_llmodule the_module in
-  let asm_out =
+let codegen_imm outchan =
+  let out = Llvm.string_of_llmodule the_module in
+  Out_channel.output_string outchan out
+
+let codegen_asm outchan =
+  let out =
     Llvm.MemoryBuffer.as_string
       (Llvm_target.TargetMachine.emit_to_memory_buffer the_module
          Llvm_target.CodeGenFileType.AssemblyFile machine)
   in
-  let obj_out =
+  Out_channel.output_string outchan out
+
+let codegen_obj outchan =
+  let out =
     Llvm.MemoryBuffer.as_string
       (Llvm_target.TargetMachine.emit_to_memory_buffer the_module
          Llvm_target.CodeGenFileType.ObjectFile machine)
   in
-  Out_channel.output_string imm_outchan imm_out;
-  Out_channel.output_string asm_outchan asm_out;
-  Out_channel.output_string obj_outchan obj_out
+  Out_channel.output_string outchan out
