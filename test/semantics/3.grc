@@ -1,0 +1,13 @@
+$ and, or, not
+
+fun check_logical_precedences(): nothing
+{
+    if 1 = 2 and 1 = 2 or 1 = 1 # (1 = 2 and 1 = 2) or 1 = 1 then
+        writeString("Error: 'or' has higher precedence than 'and'\n");
+
+    if not 1 = 2 and 1 = 2 # (not 1 = 2) and 1 = 2 then
+        writeString("Error: 'and' has higher precedence than 'not'\n");
+
+    if not 1 = 1 or 1 = 1 # (not 1 = 1) or 1 = 1 then
+        writeString("Error: 'or' has higher precedence than 'not'\n");
+}

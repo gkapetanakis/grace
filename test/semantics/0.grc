@@ -1,0 +1,43 @@
+# standard library functions
+
+fun check_libgrace(): nothing
+    var a: int;
+    var c: char;
+    var s: char[14];
+
+    fun newline(): nothing
+    {
+        writeChar('\n');
+    }
+{
+    a <- ascii('a');
+    c <- chr(a);
+
+    writeInteger(a);
+    newline();
+
+    writeChar(c);
+    newline();
+
+    strcpy(s, "Hello");
+    writeString(s);
+    newline();
+
+    writeInteger(strlen(s));
+    newline();
+
+    writeInteger(strcmp(s, "hell"));
+    newline();
+
+    writeInteger(strcmp(s, "hello"));
+    newline();
+
+    writeInteger(strcmp("hello", s));
+    newline();
+
+    writeInteger(strcmp("hell", s));
+    newline();
+
+    strcat(s, " World\n");
+    writeString(s);
+}

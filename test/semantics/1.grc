@@ -1,0 +1,14 @@
+$ if, then, else
+
+let check_if_then_else(): nothing
+{
+    if 1 = 1 then ;
+    else writeString("Error: 'else' executed even though the condition was true\n");
+
+    if 1 = 2 then writeString("Error: 'if' executed even though the condition was false\n");
+    else ;
+
+    if 1 = 2 then
+        if 1 = 1 then ;
+        else writeString("Error: 'else' matched the outer 'if'\n");
+}

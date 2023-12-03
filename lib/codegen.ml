@@ -304,15 +304,17 @@ let rec gen_cond frame caller_path (cond : Ast.cond) =
 
 let rec gen_block frame caller_path (block : Ast.block) =
   let rec aux = function
-  | [] -> ()
-  | hd :: tl ->
-    gen_stmt frame caller_path hd;
-    match Llvm.block_terminator (Llvm.insertion_block builder) with
-    | None -> aux tl
-    | Some inst -> match Llvm.instr_opcode inst with
-      | Llvm.Opcode.Ret -> aux []
-      | _ -> aux tl
-  in aux block.stmts
+    | [] -> ()
+    | hd :: tl -> (
+        gen_stmt frame caller_path hd;
+        match Llvm.block_terminator (Llvm.insertion_block builder) with
+        | None -> aux tl
+        | Some inst -> (
+            match Llvm.instr_opcode inst with
+            | Llvm.Opcode.Ret -> aux []
+            | _ -> aux tl))
+  in
+  aux block.stmts
 
 and gen_stmt frame caller_path (stmt : Ast.stmt) =
   match stmt with
@@ -335,14 +337,15 @@ and gen_stmt frame caller_path (stmt : Ast.stmt) =
       let _ = Llvm.build_cond_br cond then_block else_block builder in
       Llvm.position_at_end then_block builder;
       gen_stmt frame caller_path (Option.get stmt1_o);
-      (* will never be None *)
 
+      (* will never be None *)
       let then_block_final = Llvm.insertion_block builder in
       (match Llvm.block_terminator then_block_final with
       | None -> ignore (Llvm.build_br merge_block builder)
-      | Some inst -> match Llvm.instr_opcode inst with
-        | Llvm.Opcode.Ret -> ret_insts := inst :: !ret_insts
-        | _ -> ());
+      | Some inst -> (
+          match Llvm.instr_opcode inst with
+          | Llvm.Opcode.Ret -> ret_insts := inst :: !ret_insts
+          | _ -> ()));
 
       Llvm.position_at_end else_block builder;
 
@@ -352,9 +355,10 @@ and gen_stmt frame caller_path (stmt : Ast.stmt) =
       let else_block_final = Llvm.insertion_block builder in
       (match Llvm.block_terminator else_block_final with
       | None -> ignore (Llvm.build_br merge_block builder)
-      | Some inst -> match Llvm.instr_opcode inst with
-      | Llvm.Opcode.Ret -> ret_insts := inst :: !ret_insts
-      | _ -> ());
+      | Some inst -> (
+          match Llvm.instr_opcode inst with
+          | Llvm.Opcode.Ret -> ret_insts := inst :: !ret_insts
+          | _ -> ()));
 
       Llvm.position_at_end merge_block builder;
       if

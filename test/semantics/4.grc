@@ -1,0 +1,14 @@
+$ and/or short-circuit
+
+fun check_short_circuit(): nothing
+    fun f(ref s: char[]): int
+    {
+        writeString("Error: '");
+        writeString(s);
+        writeString("' short-circuiting does not work\n");
+        return 1;
+    }
+{
+    if 0 = 1 and f("and") > 0 then ;
+    if 1 = 1 or f("or") > 0 then ;
+}

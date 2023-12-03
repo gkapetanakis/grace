@@ -1,0 +1,12 @@
+$ while
+
+fun check_while(): nothing
+    var i: int;
+{
+    i <- 0;
+    while i < 10 do
+        i <- i + 1;
+
+    if i # 10 then
+        writeString("Error: 'while' loop executed more times than expected\n");
+}
