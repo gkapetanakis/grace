@@ -110,7 +110,9 @@ let get_all_frame_type_ptrs (Ast.MainFunc main_func : Ast.program) =
 
 let gen_frame_type (func : Ast.func) =
   let parent_frame_type_ptr =
-    match get_parent_frame_type_ptr_option func with Some ptr -> [ ptr ] | None -> []
+    match get_parent_frame_type_ptr_option func with
+    | Some ptr -> [ ptr ]
+    | None -> []
   in
   let param_lltypes = List.map lltype_of_param_def func.params in
   let local_var_defs, _, _ = Ast.reorganize_local_defs func.local_defs in
@@ -301,11 +303,20 @@ let rec gen_cond frame caller_path (cond : Ast.cond) =
       | Ast.Leq -> Llvm.build_icmp Llvm.Icmp.Sle lhs rhs "leq" builder)
 
 let rec gen_block frame caller_path (block : Ast.block) =
-  List.iter (gen_stmt frame caller_path) block.stmts
+  let rec aux = function
+  | [] -> ()
+  | hd :: tl ->
+    gen_stmt frame caller_path hd;
+    match Llvm.block_terminator (Llvm.insertion_block builder) with
+    | None -> aux tl
+    | Some inst -> match Llvm.instr_opcode inst with
+      | Llvm.Opcode.Ret -> aux []
+      | _ -> aux tl
+  in aux block.stmts
 
 and gen_stmt frame caller_path (stmt : Ast.stmt) =
   match stmt with
-  | Ast.Empty _ -> ()
+  | Ast.Empty _ -> Llvm.build_is_null (c32 0) "empty" builder |> ignore
   | Ast.Assign (l_val, expr) ->
       let rhs = gen_expr frame caller_path expr in
       let l_val_ptr = gen_l_value frame caller_path l_val in
@@ -314,9 +325,8 @@ and gen_stmt frame caller_path (stmt : Ast.stmt) =
   | Ast.SFuncCall func_call ->
       ignore (gen_func_call frame caller_path func_call)
   | Ast.If (cond, stmt1_o, stmt2_o) ->
+      let ret_insts = ref [] in
       let cond = gen_cond frame caller_path cond in
-      (* not sure if the correct condition is checked *)
-      (*let icmp_ne = Llvm.build_icmp Llvm.Icmp.Ne cond (c1 0) "if" builder in*)
       let func = Llvm.block_parent (Llvm.insertion_block builder) in
 
       let then_block = Llvm.append_block context "then" func in
@@ -326,16 +336,52 @@ and gen_stmt frame caller_path (stmt : Ast.stmt) =
       Llvm.position_at_end then_block builder;
       gen_stmt frame caller_path (Option.get stmt1_o);
       (* will never be None *)
-      (match Llvm.block_terminator (Llvm.insertion_block builder) with
+
+      let then_block_final = Llvm.insertion_block builder in
+      (match Llvm.block_terminator then_block_final with
       | None -> ignore (Llvm.build_br merge_block builder)
-      | Some _ -> ());
+      | Some inst -> match Llvm.instr_opcode inst with
+        | Llvm.Opcode.Ret -> ret_insts := inst :: !ret_insts
+        | _ -> ());
+
       Llvm.position_at_end else_block builder;
+
       if Option.is_some stmt2_o then
         gen_stmt frame caller_path (Option.get stmt2_o);
-      (match Llvm.block_terminator (Llvm.insertion_block builder) with
+
+      let else_block_final = Llvm.insertion_block builder in
+      (match Llvm.block_terminator else_block_final with
       | None -> ignore (Llvm.build_br merge_block builder)
-      | Some _ -> ());
-      Llvm.position_at_end merge_block builder
+      | Some inst -> match Llvm.instr_opcode inst with
+      | Llvm.Opcode.Ret -> ret_insts := inst :: !ret_insts
+      | _ -> ());
+
+      Llvm.position_at_end merge_block builder;
+      if
+        List.length !ret_insts = 2 && Llvm.num_operands (List.hd !ret_insts) = 1
+      then (
+        let else_inst = List.hd !ret_insts in
+        ret_insts := List.tl !ret_insts;
+        let then_inst = List.hd !ret_insts in
+
+        let then_val = Llvm.operand then_inst 0 in
+        let else_val = Llvm.operand else_inst 0 in
+
+        Llvm.delete_instruction then_inst;
+        let then_builder = Llvm.builder_at_end context then_block_final in
+        ignore (Llvm.build_br merge_block then_builder);
+
+        Llvm.delete_instruction else_inst;
+        let else_builder = Llvm.builder_at_end context else_block_final in
+        ignore (Llvm.build_br merge_block else_builder);
+
+        let ret_val =
+          Llvm.build_phi
+            [ (then_val, then_block); (else_val, else_block) ]
+            "phi" builder
+        in
+        ignore (Llvm.build_ret ret_val builder))
+      else ()
   | Ast.While (cond, stmt) ->
       let func = Llvm.block_parent (Llvm.insertion_block builder) in
       let cond_block = Llvm.append_block context "cond" func in
@@ -364,7 +410,9 @@ and gen_stmt frame caller_path (stmt : Ast.stmt) =
 
 let gen_func_decl (func : Ast.func) =
   let parent_frame_type_ptr =
-    match get_parent_frame_type_ptr_option func with Some ptr -> [ ptr ] | None -> []
+    match get_parent_frame_type_ptr_option func with
+    | Some ptr -> [ ptr ]
+    | None -> []
   in
   let param_lltypes = List.map lltype_of_param_def func.params in
   let full_params = parent_frame_type_ptr @ param_lltypes in
@@ -387,7 +435,9 @@ let rec gen_func_def (func : Ast.func) =
   List.iter gen_func_def local_f_defs;
 
   let parent_frame_type_ptr =
-    match get_parent_frame_type_ptr_option func with Some ptr -> [ ptr ] | None -> []
+    match get_parent_frame_type_ptr_option func with
+    | Some ptr -> [ ptr ]
+    | None -> []
   in
   let param_lltypes = List.map lltype_of_param_def func.params in
   let full_params = parent_frame_type_ptr @ param_lltypes in

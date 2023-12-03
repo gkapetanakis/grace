@@ -101,7 +101,7 @@ let () =
   let asm_outchan = open_asm_out_channel () in
   let obj_outchan = open_obj_out_channel () in
   let lexbuf = Lexing.from_channel inchan in
-  (if !filename = String.empty then filename := "stdin");
+  if !filename = String.empty then filename := "stdin";
   Lexing.set_filename lexbuf !filename;
   try
     let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
@@ -135,5 +135,7 @@ let () =
       Grace_lib.Error.pr_semantic_error (loc, msg)
   | Grace_lib.Error.Symbol_table_error (loc, msg) ->
       Grace_lib.Error.pr_symbol_table_error (loc, msg)
+  | Grace_lib.Error.Codegen_error (loc, msg) ->
+      Grace_lib.Error.pr_codegen_error (loc, msg)
   | Grace_lib.Error.Internal_compiler_error msg ->
       Grace_lib.Error.pr_internal_compiler_error msg

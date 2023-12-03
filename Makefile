@@ -2,9 +2,9 @@
 
 all:
 	cd runtime_lib && make
-	@ dune build @install
+	@ dune build @all
 
-uninstall:
+uninstall: install
 	@ dune uninstall
 
 clean:
