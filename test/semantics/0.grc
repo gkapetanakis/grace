@@ -1,4 +1,4 @@
-# standard library functions
+$ standard library functions
 
 fun check_libgrace(): nothing
     var a: int;

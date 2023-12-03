@@ -6,7 +6,7 @@ fun check_arithmetic_precedences(): nothing
         writeString("Error: '+' has higher precedence than '*'\n");
 
     if 1 - 2 * 3 # 1 - (2 * 3) then
-        writeString("Error: '-' has higher precedence than '-'\n);
+        writeString("Error: '-' has higher precedence than '-'\n");
 
     if 6 div 3 + 1 # (6 div 3) + 1 then
         writeString("Error: '+' has higher precedence then 'div'\n");

@@ -1,8 +1,9 @@
 (tests
- (names lexer parser)
- ;; (deps
- ;;  (source_tree ./programs))
- (libraries grace_lib llvm.analysis llvm))
+ (names semantics)
+ (deps
+  (source_tree ./semantics)
+  (file ./libgrace.a))
+ (libraries grace_lib))
 
 (env
  (dev
