@@ -32,11 +32,9 @@ fun check_libgrace(): nothing
     writeInteger(strcmp("Hello", s));
     newline();
 
-    $ 'o' - '\0' = 111
     writeInteger(strcmp(s, "Hell"));
     newline();
 
-    $ '\0' - 'o' = -111
     writeInteger(strcmp("Hell", s));
     newline();
 
