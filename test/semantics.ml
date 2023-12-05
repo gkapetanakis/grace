@@ -7,12 +7,16 @@ let compile_to_obj filename =
   let lexbuf = Lexing.from_channel inchan in
   Lexing.set_filename lexbuf filename;
   try
+    let the_module, context, irgen, _, _, codegen_obj =
+      Grace_lib.Codegen.init_codegen ()
+    in
     let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
-    Grace_lib.Codegen.irgen ast false;
+    irgen ast false;
     let outchan = open_out (remove_extension filename ^ ".o") in
-    Grace_lib.Codegen.codegen_obj outchan;
+    codegen_obj outchan;
+    Grace_lib.Codegen.dispose_codegen (the_module, context);
     close_in inchan;
-    close_out outchan;
+    close_out outchan
   with
   | Grace_lib.Error.Lexing_error (loc, msg) ->
       Grace_lib.Error.pr_lexing_error (loc, msg)
@@ -28,10 +32,16 @@ let compile_to_obj filename =
       Grace_lib.Error.pr_internal_compiler_error msg
 
 let link_to_exe filename =
+  let linker = "clang-14" in
   let input = remove_extension filename ^ ".o" in
   let output = remove_extension filename ^ ".exe" in
+  let runtime_path = "." in
+  let runtime_name = "grace" in
   if
-    Sys.command (Printf.sprintf "clang-14 -o %s %s libgrace.a" output input) <> 0
+    Sys.command
+      (Printf.sprintf "%s -no-pie -o %s %s -L %s -l %s" linker output
+         input runtime_path runtime_name)
+    <> 0
   then prerr_endline (filename ^ ": Linking failed")
 
 let () =
@@ -48,8 +58,10 @@ let () =
       compile_to_obj filename;
       link_to_exe filename)
     files;
-  let executables = List.sort String.compare
+  let executables =
+    List.sort String.compare
       (List.filter
          (fun f -> Filename.check_suffix f ".exe")
-         (Array.to_list (Sys.readdir path))) in
-  List.iter (fun f -> print_endline f; ignore (Sys.command (path ^ f))) executables
+         (Array.to_list (Sys.readdir path)))
+  in
+  List.iter (fun f -> ignore (Sys.command (path ^ f))) executables

@@ -1,0 +1,8 @@
+fun check_string_termination(): nothing
+    fun aux(ref s: char[1]): nothing
+    {
+    }
+{
+    aux("a");
+    aux("a\0\0\0");
+}

@@ -9,6 +9,6 @@ fun check_recursion(): nothing
     }
 {
     res <- fib(10);
-    if res # 34 then
+    if res # 55 then
         writeString("Error: recursion did not work as expected\n");
 }

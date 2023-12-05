@@ -49,7 +49,7 @@ let remove_extension filename =
   let final_dot_index = String.rindex filename '.' in
   String.sub filename 0 final_dot_index
 
-let remove_path filename =
+let _remove_path filename =
   let final_slash_index = String.rindex filename '/' in
   String.sub filename (final_slash_index + 1)
     (String.length filename - final_slash_index - 1)
@@ -104,11 +104,14 @@ let () =
   if !filename = String.empty then filename := "stdin";
   Lexing.set_filename lexbuf !filename;
   try
+    let _, _, irgen, codegen_imm, codegen_asm, codegen_obj =
+      Grace_lib.Codegen.init_codegen ()
+    in
     let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
-    Grace_lib.Codegen.irgen ast !optimizations;
-    Grace_lib.Codegen.codegen_imm imm_outchan;
-    Grace_lib.Codegen.codegen_asm asm_outchan;
-    Grace_lib.Codegen.codegen_obj obj_outchan;
+    irgen ast !optimizations;
+    codegen_imm imm_outchan;
+    codegen_asm asm_outchan;
+    codegen_obj obj_outchan;
     close_in inchan;
     close_out imm_outchan;
     close_out asm_outchan;
@@ -119,7 +122,6 @@ let () =
       let exit_code =
         Sys.command
           (Printf.sprintf "%s -no-pie -o %s.exe %s.o -L %s -l %s" linker
-             (*(remove_path (remove_extension !filename))*)
              (remove_extension !filename)
              (remove_extension !filename)
              runtime_path runtime_name)

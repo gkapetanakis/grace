@@ -26,16 +26,18 @@ fun check_libgrace(): nothing
     writeInteger(strlen(s));
     newline();
 
-    writeInteger(strcmp(s, "hell"));
+    writeInteger(strcmp(s, "Hello"));
     newline();
 
-    writeInteger(strcmp(s, "hello"));
+    writeInteger(strcmp("Hello", s));
     newline();
 
-    writeInteger(strcmp("hello", s));
+    $ 'o' - '\0' = 111
+    writeInteger(strcmp(s, "Hell"));
     newline();
 
-    writeInteger(strcmp("hell", s));
+    $ '\0' - 'o' = -111
+    writeInteger(strcmp("Hell", s));
     newline();
 
     strcat(s, " World\n");
