@@ -121,7 +121,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Scalar Int;
             pass_by = Value;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "readString" ];
             loc;
           };
           {
@@ -129,7 +129,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 2;
-            parent_path = [];
+            parent_path = [ "readString" ];
             loc;
           };
         ],
@@ -143,7 +143,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Scalar Char;
             pass_by = Value;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "writeChar" ];
             loc;
           };
         ],
@@ -157,7 +157,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Scalar Int;
             pass_by = Value;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "writeInteger" ];
             loc;
           };
         ],
@@ -185,7 +185,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Scalar Char;
             pass_by = Value;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "ascii" ];
             loc;
           };
         ],
@@ -199,7 +199,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Scalar Int;
             pass_by = Value;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "chr" ];
             loc;
           };
         ],
@@ -213,7 +213,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "strcat" ];
             loc;
           };
           {
@@ -221,7 +221,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 2;
-            parent_path = [];
+            parent_path = [ "strcat" ];
             loc;
           };
         ],
@@ -235,7 +235,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "strcmp" ];
             loc;
           };
           {
@@ -243,7 +243,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 2;
-            parent_path = [];
+            parent_path = [ "strcmp" ];
             loc;
           };
         ],
@@ -257,7 +257,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "strcpy" ];
             loc;
           };
           {
@@ -265,7 +265,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 2;
-            parent_path = [];
+            parent_path = [ "strcpy" ];
             loc;
           };
         ],
@@ -279,7 +279,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
             param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
-            parent_path = [];
+            parent_path = [ "strlen" ];
             loc;
           };
         ],
