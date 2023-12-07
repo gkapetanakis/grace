@@ -1,6 +1,6 @@
 $$
     Description:
-        a function's block must always return someting
+        if both then and else statements return a value, then there needs not be a return statement outside the if-then-else
     Purpose:
         check that llvm produces correct code
 $$
@@ -17,7 +17,6 @@ fun main(): nothing
             a <- a - 2;
             return a;
         }
-        return 0; $ If we edit this out, then the program is wrong (Codegen error)
     }
 {
     g();

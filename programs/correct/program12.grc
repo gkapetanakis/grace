@@ -1,3 +1,10 @@
+$$
+  Description:
+      Check reading and writing of characters, integers and strings
+  Purpose:
+      check that our runtime IO functions work correctly
+$$
+
 fun doSomething() : nothing
   var c: char;
   var i: int;

@@ -2,7 +2,7 @@ $$
   Description:
     (Erroneous) assignment to string literal
   Purpose:
-    Test if compiler identifies this error, this error should be identified in runtime only...
+    Test if runtime environment identifies this error
 $$
 
 fun main () : nothing

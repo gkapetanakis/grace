@@ -1,3 +1,8 @@
+$$
+  Description: language handles dangling else by associating each else with the closest previous if statement
+  Purpose: test that dangling else is handled correctly
+$$
+
 fun f(): nothing
   var i: int;
   fun input(ref i: int): nothing
