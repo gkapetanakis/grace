@@ -31,7 +31,9 @@ type entry = { id : string; entry_type : entry_type; scope : scope ref }
 and scope = { mutable next_offset : int; mutable entries : entry list }
 
 let get_loc_entry (entry : entry) = get_loc_entry_type entry.entry_type
-let get_data_type_entry (entry : entry) = get_data_type_entry_type entry.entry_type
+
+let get_data_type_entry (entry : entry) =
+  get_data_type_entry_type entry.entry_type
 
 let get_return_type_entry (entry : entry) =
   get_return_type_entry_type entry.entry_type
@@ -48,7 +50,8 @@ let get_and_increment_offset (sym_tbl : symbol_table) =
   scope.next_offset <- scope.next_offset + 1;
   offset
 
-let insert loc (id : string) (entry_type : entry_type) (sym_tbl : symbol_table) =
+let insert loc (id : string) (entry_type : entry_type) (sym_tbl : symbol_table)
+    =
   match sym_tbl.scopes with
   | [] ->
       raise

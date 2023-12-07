@@ -1,10 +1,10 @@
 (* initialize llvm *)
 Llvm_all_backends.initialize ()
 
-let init_codegen () =
+let init_codegen filename =
   (* essential objects required by llvm *)
   let context = Llvm.create_context () in
-  let the_module = Llvm.create_module context "grace" in
+  let the_module = Llvm.create_module context filename in
   let builder = Llvm.builder context in
 
   (* llvm types that correspond to grace types *)
@@ -152,7 +152,7 @@ let init_codegen () =
     match slv with
     | Ast.Id l_val_id -> gen_l_val_id frame caller_path l_val_id
     | Ast.LString Ast.{ id; _ } ->
-        let str = Llvm.build_global_string id id builder in
+        let str = Llvm.build_global_string id "str" builder in
         Llvm.build_struct_gep str 0 "str_ptr" builder
     (* returns i8* - matches how parameters are passed, because global strings
        are only passed by reference as parameters *)

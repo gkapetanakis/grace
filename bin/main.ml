@@ -46,13 +46,16 @@ let print_help_message () =
   [@@ocamlformat "disable"]
 
 let remove_extension filename =
-  let final_dot_index = String.rindex filename '.' in
-  String.sub filename 0 final_dot_index
+  match String.rindex_opt filename '.' with
+  | None -> filename
+  | Some final_dot_index -> String.sub filename 0 final_dot_index
 
-let _remove_path filename =
-  let final_slash_index = String.rindex filename '/' in
-  String.sub filename (final_slash_index + 1)
-    (String.length filename - final_slash_index - 1)
+let remove_path filename =
+  match String.rindex_opt filename '/' with
+  | None -> filename
+  | Some final_slash_index ->
+      String.sub filename (final_slash_index + 1)
+        (String.length filename - final_slash_index - 1)
 
 let process_arguments () =
   let argv = Sys.argv in
@@ -105,7 +108,7 @@ let () =
   Lexing.set_filename lexbuf !filename;
   try
     let _, _, irgen, codegen_imm, codegen_asm, codegen_obj =
-      Grace_lib.Codegen.init_codegen ()
+      Grace_lib.Codegen.init_codegen (remove_path !filename)
     in
     let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
     irgen ast !optimizations;

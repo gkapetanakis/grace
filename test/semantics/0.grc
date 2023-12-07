@@ -32,11 +32,11 @@ fun check_libgrace(): nothing
     writeInteger(strcmp("Hello", s));
     newline();
 
-    writeInteger(strcmp(s, "Hell"));
-    newline();
+    if strcmp(s, "Hell") <= 0 then
+        writeString("Error: expected positive, strcmp returned non positive\n");
 
-    writeInteger(strcmp("Hell", s));
-    newline();
+    if strcmp("Hell", s) >= 0 then
+        writeString("Error: expected negative, strcmp returned non negative\n");
 
     strcat(s, " World\n");
     writeString(s);

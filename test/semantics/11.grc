@@ -4,9 +4,8 @@ fun check_array_spill(): nothing
 {
     b <- 0;
     a[1] <- 1; $ this should spill to variable b, since a, b are defined contiguously in a structure
-    writeInteger(b);
     
     if (b # 1) then {
-        writeString("Error: structs should allow spilling from array to variables defined contiguously in structs. Just like C does.\n");
+        writeString("Error: structs should allow spilling from array to variables defined contiguously in structs (just like C does)\n");
     }
 }
