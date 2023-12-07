@@ -2,7 +2,7 @@
  (names semantics)
  (deps
   (source_tree ./semantics)
-  (file ./libgrace.a))
+  (file ../runtime_lib/libgrace.a))
  (libraries grace_lib))
 
 (env
