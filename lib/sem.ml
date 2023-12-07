@@ -15,7 +15,7 @@ let sem_close_scope loc sym_tbl =
         match entries with
         | [] -> (def_set, decl_set)
         | entry :: tl -> (
-            match entry.type_t with
+            match entry.entry_type with
             | Function fdr ->
                 let fd = !fdr in
                 if fd.status = Declared then
@@ -48,7 +48,7 @@ let sem_close_scope loc sym_tbl =
         decl_set
 
 let verify_var_def (vd : var_def) =
-  match vd.type_t with
+  match vd.var_type with
   | Array (_, dims) ->
       if
         List.find_opt
@@ -66,7 +66,7 @@ let verify_var_def (vd : var_def) =
   | _ -> ()
 
 let verify_param_def (pd : param_def) =
-  match pd.type_t with
+  match pd.param_type with
   | Array (_, dims) ->
       let tl_dims = List.tl dims in
       if
@@ -106,22 +106,22 @@ let comp_var_param_types loc (vt : var_type) (pt : param_type) =
   | t1, t2 -> if t1 <> t2 then raise (Semantic_error (loc, "Type mismatch"))
 
 let comp_var_param_def (vd : var_def) (pd : param_def) =
-  comp_var_param_types vd.loc vd.type_t pd.type_t
+  comp_var_param_types vd.loc vd.var_type pd.param_type
 
 let comp_param_decl_def (pd1 : param_def) (pd2 : param_def) =
   if pd1.pass_by <> pd2.pass_by then
     raise
       (Semantic_error
          (pd1.loc, "Parameter definition/declaration 'pass by' mismatch"))
-  else if pd1.type_t <> pd2.type_t then
+  else if pd1.param_type <> pd2.param_type then
     raise
       (Semantic_error (pd1.loc, "Parameter definition/declaration type mismatch"))
 
 let type_of_ret loc sym_tbl =
   let sc = List.hd (List.tl sym_tbl.scopes) in
   let entry = List.hd sc.entries in
-  match entry.type_t with
-  | Function f -> !f.type_t
+  match entry.entry_type with
+  | Function f -> !f.ret_type
   | _ ->
       raise (Semantic_error (loc, "Tried to get return type of non-function"))
 
@@ -136,7 +136,7 @@ let check_ref expr pass_by =
 
 (* compare headers of a declaration and definition to see if they match *)
 let compare_heads (decl : func) (def : func) =
-  if decl.type_t <> def.type_t then
+  if decl.ret_type <> def.ret_type then
     raise
       (Semantic_error
          (def.loc, "Function definition/declaration return type mismatch"))
@@ -159,7 +159,7 @@ let ins_var_def (vd : var_def) (sym_tbl : symbol_table) =
 
 let sem_param_def (pd : param_def) (sym_tbl : symbol_table) =
   verify_param_def pd;
-  match (pd.type_t, pd.pass_by) with
+  match (pd.param_type, pd.pass_by) with
   | Array _, Value ->
       raise
         (Semantic_error (pd.loc, "Array parameter must be passed by reference"))
@@ -181,27 +181,27 @@ let sem_simple_l_value (slv : simple_l_value) (sym_tbl : symbol_table) =
       | None ->
           raise
             (Semantic_error (l_val_id.loc, "Variable not defined in any scope"))
-      | Some { type_t; _ } -> (
-          match type_t with
+      | Some { entry_type; _ } -> (
+          match entry_type with
           | Variable vdr ->
               let vd = !vdr in
-              l_val_id.type_t <- vd.type_t;
+              l_val_id.data_type <- vd.var_type;
               l_val_id.passed_by <- Value;
               l_val_id.frame_offset <- vd.frame_offset;
               l_val_id.parent_path <- vd.parent_path;
-              l_val_id.type_t
+              l_val_id.data_type
           | Parameter pdr ->
               let pd = !pdr in
-              l_val_id.type_t <- pd.type_t;
+              l_val_id.data_type <- pd.param_type;
               l_val_id.passed_by <- pd.pass_by;
               l_val_id.frame_offset <- pd.frame_offset;
               l_val_id.parent_path <- pd.parent_path;
-              l_val_id.type_t
+              l_val_id.data_type
           | Function _ ->
               raise
                 (Semantic_error
                    (l_val_id.loc, "Function cannot be used as l-value"))))
-  | LString { type_t; _ } -> type_t
+  | LString { data_type; _ } -> data_type
 
 let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
   match lv with
@@ -241,13 +241,13 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
   | None ->
       raise
         (Semantic_error (func_call.loc, "Function not defined " ^ func_call.id))
-  | Some { type_t; _ } -> (
-      match type_t with
+  | Some { entry_type; _ } -> (
+      match entry_type with
       | Function fdr ->
           let fd = !fdr in
-          func_call.type_t <- fd.type_t;
+          func_call.ret_type <- fd.ret_type;
           let param_types =
-            List.map (fun (pd : param_def) -> pd.type_t) fd.params
+            List.map (fun (pd : param_def) -> pd.param_type) fd.params
           in
           if List.length param_types <> List.length exprs then
             raise (Semantic_error (func_call.loc, "Parameter count mismatch"))
@@ -265,7 +265,7 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
                   (expr, param.pass_by))
                 exprs fd.params;
             func_call.callee_path <- fd.parent_path;
-            Scalar func_call.type_t
+            Scalar func_call.ret_type
       | _ -> raise (Semantic_error (func_call.loc, "Function not defined")))
 
 (* don't need to do checks again for LValue and FuncCall again *)
@@ -274,7 +274,7 @@ and sem_expr (expr : expr) (sym_tbl : symbol_table) =
   | LitInt _ -> Scalar Int
   | LitChar _ -> Scalar Char
   | LValue l_val -> sem_l_value l_val sym_tbl
-  | EFuncCall func_call -> Scalar func_call.type_t
+  | EFuncCall func_call -> Scalar func_call.ret_type
   | UnAritOp (_, expr) -> (
       match sem_expr expr sym_tbl with
       | Scalar Int -> Scalar Int
@@ -347,8 +347,8 @@ let ins_func_decl (func : Ast.func) (sym_tbl : symbol_table) =
 let sem_func_def (func : Ast.func) (sym_tbl : symbol_table) =
   match lookup func.id sym_tbl with
   | None -> ()
-  | Some { type_t; _ } -> (
-      match type_t with
+  | Some { entry_type; _ } -> (
+      match entry_type with
       | Function fdr ->
           let fd = !fdr in
           if fd.status = Ast.Defined then
@@ -364,13 +364,13 @@ let ins_func_def (func : Ast.func) (sym_tbl : symbol_table) =
 let sem_program (func : Ast.func) (sym_tbl : symbol_table) =
   if List.length func.params <> 0 then
     raise (Semantic_error (func.loc, "Main function cannot have parameters"))
-  else if func.type_t <> Nothing then
+  else if func.ret_type <> Nothing then
     raise (Semantic_error (func.loc, "Main function cannot have return type"))
   else
     (* check for any lingering things that might be left behind from parsing... *)
     Hashtbl.iter
-      (fun _ value ->
-        match value.type_t with
+      (fun _ entry ->
+        match entry.entry_type with
         | Function fdr ->
             let fd = !fdr in
             if fd.status = Ast.Declared then

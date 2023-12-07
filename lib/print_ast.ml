@@ -43,7 +43,7 @@ let pr_comp_op off enable = function
 let pr_var_def off enable (vd : var_def) =
   let str =
     off ^ "var_def(" ^ vd.id ^ " : "
-    ^ pr_data_type "" false vd.type_t
+    ^ pr_data_type "" false vd.var_type
     ^ "): ["
     ^ String.concat "_" (List.rev vd.parent_path)
     ^ "]" ^ " offset: "
@@ -56,7 +56,7 @@ let pr_param_def off enable (pd : param_def) =
     off ^ "param_def("
     ^ (if pd.pass_by = Reference then "ref " else "")
     ^ pd.id ^ " : "
-    ^ pr_data_type "" false pd.type_t
+    ^ pr_data_type "" false pd.param_type
     ^ "): ["
     ^ String.concat "_" (List.rev pd.parent_path)
     ^ "]" ^ " offset: "
@@ -66,20 +66,20 @@ let pr_param_def off enable (pd : param_def) =
 
 let pr_simple_l_value off enable (slv : simple_l_value) =
   match slv with
-  | Id { id; type_t; passed_by; frame_offset; parent_path; _ } ->
+  | Id { id; data_type; passed_by; frame_offset; parent_path; _ } ->
       let str =
         off ^ "id("
         ^ (if passed_by = Reference then "passed by ref " else "")
         ^ id ^ " : "
-        ^ pr_data_type "" false type_t
+        ^ pr_data_type "" false data_type
         ^ "): ["
         ^ String.concat "_" (List.rev parent_path)
         ^ "]" ^ " offset: " ^ string_of_int frame_offset
       in
       pr_enable str enable
-  | LString { id; type_t; _ } ->
+  | LString { id; data_type; _ } ->
       let str =
-        off ^ "l_string(" ^ id ^ " : " ^ pr_data_type "" false type_t ^ ")"
+        off ^ "l_string(" ^ id ^ " : " ^ pr_data_type "" false data_type ^ ")"
       in
       pr_enable str enable
 
@@ -115,7 +115,7 @@ and pr_func_call off enable (fc : func_call) =
     ^ "] " ^ "caller["
     ^ String.concat "_" (List.rev fc.caller_path)
     ^ "] return type: "
-    ^ pr_scalar_type "" false fc.type_t
+    ^ pr_scalar_type "" false fc.ret_type
     ^ ")"
   in
   pr_enable str enable
@@ -213,7 +213,7 @@ let pr_header off enable (func : func) =
     ^ String.concat ""
         (List.map (fun f -> pr_param_def (off ^ sep ^ sep) true f) func.params)
     ^ off ^ sep ^ "data_type: "
-    ^ pr_scalar_type "" false func.type_t
+    ^ pr_scalar_type "" false func.ret_type
     ^ ")"
   in
   pr_enable str enable

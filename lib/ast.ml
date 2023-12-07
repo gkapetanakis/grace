@@ -14,7 +14,7 @@ type func_status = Defined | Declared
 
 type var_def = {
   id : string;
-  type_t : var_type;
+  var_type : var_type;
   frame_offset : int;
   parent_path : string list;
   (* depth : int; *)
@@ -23,7 +23,7 @@ type var_def = {
 
 type param_def = {
   id : string;
-  type_t : param_type;
+  param_type : param_type;
   pass_by : pass_by;
   mutable frame_offset : int;
   mutable parent_path : string list;
@@ -33,7 +33,7 @@ type param_def = {
 
 type l_value_id = {
   id : string;
-  mutable type_t : data_type;
+  mutable data_type : data_type;
   mutable passed_by : pass_by;
   mutable frame_offset : int;
   mutable parent_path : string list;
@@ -41,7 +41,7 @@ type l_value_id = {
   loc : loc;
 }
 
-type l_value_lstring = { id : string; type_t : data_type; loc : loc }
+type l_value_lstring = { id : string; data_type : data_type; loc : loc }
 
 type l_value_array_access = {
   simple_l_value : simple_l_value;
@@ -54,7 +54,7 @@ and l_value = Simple of simple_l_value | ArrayAccess of l_value_array_access
 and func_call = {
   id : string;
   mutable args : (expr * pass_by) list;
-  mutable type_t : ret_type;
+  mutable ret_type : ret_type;
   mutable callee_path : string list;
   (* mutable callee_depth : int; *)
   caller_path : string list;
@@ -89,7 +89,7 @@ and stmt =
 type func = {
   id : string;
   params : param_def list;
-  type_t : ret_type;
+  ret_type : ret_type;
   mutable local_defs : local_def list;
   mutable body : block option;
   loc : loc;

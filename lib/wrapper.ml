@@ -18,7 +18,7 @@ let wrap_var_def loc id vt sym_tbl =
   let var_def : var_def =
     {
       id;
-      type_t = vt;
+      var_type = vt;
       frame_offset = Symbol.get_and_increment_offset sym_tbl;
       parent_path = sym_tbl.parent_path;
       loc;
@@ -34,7 +34,7 @@ let wrap_param_def loc id pt pb (_sym_tbl : Symbol.symbol_table) =
   let param_def : param_def =
     {
       id;
-      type_t = pt;
+      param_type = pt;
       pass_by = pb;
       frame_offset = 0;
       (* will be set by wrap_decl/def_header *)
@@ -50,7 +50,7 @@ let wrap_l_value_id loc id exprs sym_tbl =
   let l_value_id : l_value_id =
     {
       id;
-      type_t = Scalar Nothing;
+      data_type = Scalar Nothing;
       (* will be changed by sem_l_value *)
       passed_by = Value;
       (* will be changed by sem_l_value *)
@@ -71,7 +71,7 @@ let wrap_l_value_id loc id exprs sym_tbl =
 
 let wrap_l_value_string loc str exprs sym_tbl =
   let l_value_str : l_value_lstring =
-    { id = str; type_t = Array (Char, [ Some (String.length str) ]); loc }
+    { id = str; data_type = Array (Char, [ Some (String.length str) ]); loc }
   in
   let l_value =
     match exprs with
@@ -87,7 +87,7 @@ let wrap_func_call loc id exprs (sym_tbl : Symbol.symbol_table) =
       id;
       args = [];
       (* will be set in sem_func_call *)
-      type_t = Nothing;
+      ret_type = Nothing;
       (* will be set in sem_func_call *)
       callee_path = [];
       (* will be set in sem_func_call *)
@@ -204,7 +204,7 @@ let wrap_decl_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
     {
       id;
       params = pd_l;
-      type_t = ret_type;
+      ret_type;
       local_defs = [];
       body = None;
       loc;
@@ -232,7 +232,7 @@ let wrap_def_header loc id pd_l ret_type (sym_tbl : Symbol.symbol_table) =
     {
       id;
       params = pd_l;
-      type_t = ret_type;
+      ret_type;
       local_defs = [];
       (* will be added later *)
       body = None;
@@ -274,7 +274,7 @@ let insert_virtual_main (func : func) =
     {
       id = Symbol.global_scope_name;
       params = [];
-      type_t = Int;
+      ret_type = Int;
       local_defs = [ FuncDef func ];
       body =
         Some
@@ -285,7 +285,7 @@ let insert_virtual_main (func : func) =
                   {
                     id = func.id;
                     args = [];
-                    type_t = func.type_t;
+                    ret_type = func.ret_type;
                     callee_path = func.parent_path;
                     caller_path = [];
                     loc = func.loc;

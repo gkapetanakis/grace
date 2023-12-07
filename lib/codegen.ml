@@ -69,7 +69,7 @@ let init_codegen () =
   in
 
   (* just the var type (no pointers) *)
-  let lltype_of_var_def (vd : Ast.var_def) = lltype_of_data_type vd.type_t in
+  let lltype_of_var_def (vd : Ast.var_def) = lltype_of_data_type vd.var_type in
 
   (*
   by value -> parameter type (no pointer)
@@ -77,12 +77,12 @@ let init_codegen () =
 *)
   let lltype_of_param_def (pd : Ast.param_def) =
     match pd.pass_by with
-    | Ast.Value -> lltype_of_data_type pd.type_t
+    | Ast.Value -> lltype_of_data_type pd.param_type
     | Ast.Reference -> (
-        match pd.type_t with
+        match pd.param_type with
         | Ast.Array (s, _ :: tl) ->
             Llvm.pointer_type (lltype_of_data_type (Ast.Array (s, tl)))
-        | _ -> Llvm.pointer_type (lltype_of_data_type pd.type_t))
+        | _ -> Llvm.pointer_type (lltype_of_data_type pd.param_type))
   in
 
   let get_parent_frame_type_ptr_option (func : Ast.func) =
@@ -164,8 +164,8 @@ let init_codegen () =
         let expr_values_list = List.map (gen_expr frame caller_path) e_l in
         let idx =
           match slv with
-          | Ast.Id { passed_by; type_t; _ } -> (
-              match (passed_by, type_t) with
+          | Ast.Id { passed_by; data_type; _ } -> (
+              match (passed_by, data_type) with
               | Ast.Reference, Ast.Array _ ->
                   [] (* both reference AND array causes problems *)
               | _, _ -> [ c32 0 ])
@@ -198,8 +198,8 @@ let init_codegen () =
         in
         match l_v with
         | Ast.Simple (Ast.Id l_val_id) -> (
-            let Ast.{ passed_by; type_t; _ } = l_val_id in
-            match (passed_by, type_t) with
+            let Ast.{ passed_by; data_type; _ } = l_val_id in
+            match (passed_by, data_type) with
             | Ast.Value, Ast.Array _ ->
                 let l_val_ptr = gen_l_value frame caller_path l_v in
                 Llvm.build_gep l_val_ptr [| c32 0; c32 0 |] "array_ptr" builder
@@ -211,8 +211,8 @@ let init_codegen () =
         | Ast.Simple (Ast.LString _) -> gen_l_value frame caller_path l_v
         | Ast.ArrayAccess Ast.{ simple_l_value = lv; exprs = e_l; _ } -> (
             match lv with
-            | Ast.Id { passed_by; type_t; _ } -> (
-                match (passed_by, type_t) with
+            | Ast.Id { passed_by; data_type; _ } -> (
+                match (passed_by, data_type) with
                 | Ast.Value, Ast.Array (_, dims) ->
                     if List.length dims > List.length e_l then
                       let l_val_ptr = gen_l_value frame caller_path l_v in
@@ -248,7 +248,7 @@ let init_codegen () =
     in
     let func_args = frame_ptr @ func_args in
     let ll_local_var_name =
-      if func_call.type_t = Ast.Nothing then ""
+      if func_call.ret_type = Ast.Nothing then ""
         (* void returns shouldn't be named *)
       else "func_call_" ^ func_call.id
     in
@@ -418,8 +418,8 @@ let init_codegen () =
         | Some expr -> (
             let ret_val = gen_expr frame caller_path expr in
             match expr with
-            | Ast.EFuncCall Ast.{ type_t; _ } ->
-                if type_t = Ast.Nothing then
+            | Ast.EFuncCall Ast.{ ret_type; _ } ->
+                if ret_type = Ast.Nothing then
                   ignore (Llvm.build_ret_void builder)
                 else ignore (Llvm.build_ret ret_val builder)
             | _ -> ignore (Llvm.build_ret ret_val builder)))
@@ -433,7 +433,7 @@ let init_codegen () =
     in
     let param_lltypes = List.map lltype_of_param_def func.params in
     let full_params = parent_frame_type_ptr @ param_lltypes in
-    let ret_type = lltype_of_scalar func.type_t in
+    let ret_type = lltype_of_scalar func.ret_type in
     let func_type = Llvm.function_type ret_type (Array.of_list full_params) in
     match Llvm.lookup_function (Ast.get_proper_func_name func) the_module with
     | None ->
@@ -461,7 +461,7 @@ let init_codegen () =
     in
     let param_lltypes = List.map lltype_of_param_def func.params in
     let full_params = parent_frame_type_ptr @ param_lltypes in
-    let ret_type = lltype_of_scalar func.type_t in
+    let ret_type = lltype_of_scalar func.ret_type in
     let func_type = Llvm.function_type ret_type (Array.of_list full_params) in
     let func_name = Ast.get_proper_func_name func in
     let func_decl =
@@ -492,7 +492,7 @@ let init_codegen () =
     gen_block frame (func.id :: func.parent_path) (Option.get func.body);
     match Llvm.block_terminator (Llvm.insertion_block builder) with
     | None -> (
-        match func.type_t with
+        match func.ret_type with
         | Ast.Nothing -> ignore (Llvm.build_ret_void builder)
         | _ ->
             raise

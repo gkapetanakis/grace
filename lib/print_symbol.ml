@@ -10,8 +10,8 @@ let pr_entry_type off enable et =
   | Function func ->
       off ^ "Function: " ^ endl ^ pr_header (off ^ sep) enable !func
 
-let pr_entry off enable { id; type_t; _ } =
-  off ^ "Entry: " ^ id ^ endl ^ pr_entry_type (off ^ sep) enable type_t
+let pr_entry off enable { id; entry_type; _ } =
+  off ^ "Entry: " ^ id ^ endl ^ pr_entry_type (off ^ sep) enable entry_type
 
 let pr_scope off enable { entries; _ } =
   let str =

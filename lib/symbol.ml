@@ -17,24 +17,24 @@ let get_loc_entry_type (entry_type : entry_type) =
 
 let get_data_type_entry_type (entry_type : entry_type) =
   match entry_type with
-  | Variable v -> !v.type_t
-  | Parameter p -> !p.type_t
-  | Function f -> Scalar !f.type_t
+  | Variable v -> !v.var_type
+  | Parameter p -> !p.param_type
+  | Function f -> Scalar !f.ret_type
 
 let get_return_type_entry_type (entry_type : entry_type) =
   match entry_type with
-  | Function f -> !f.type_t
+  | Function f -> !f.ret_type
   | _ ->
       raise (Internal_compiler_error "Tried to get return type of non-function")
 
-type entry = { id : string; type_t : entry_type; scope : scope ref }
+type entry = { id : string; entry_type : entry_type; scope : scope ref }
 and scope = { mutable next_offset : int; mutable entries : entry list }
 
-let get_loc_entry (entry : entry) = get_loc_entry_type entry.type_t
-let get_data_type_entry (entry : entry) = get_data_type_entry_type entry.type_t
+let get_loc_entry (entry : entry) = get_loc_entry_type entry.entry_type
+let get_data_type_entry (entry : entry) = get_data_type_entry_type entry.entry_type
 
 let get_return_type_entry (entry : entry) =
-  get_return_type_entry_type entry.type_t
+  get_return_type_entry_type entry.entry_type
 
 type symbol_table = {
   mutable scopes : scope list;
@@ -48,13 +48,13 @@ let get_and_increment_offset (sym_tbl : symbol_table) =
   scope.next_offset <- scope.next_offset + 1;
   offset
 
-let insert loc (id : string) (type_t : entry_type) (sym_tbl : symbol_table) =
+let insert loc (id : string) (entry_type : entry_type) (sym_tbl : symbol_table) =
   match sym_tbl.scopes with
   | [] ->
       raise
         (Symbol_table_error (loc, "Tried to insert into empty symbol table"))
   | hd :: _ ->
-      let entry = { id; type_t; scope = ref hd } in
+      let entry = { id; entry_type; scope = ref hd } in
       Hashtbl.add sym_tbl.table id entry;
       hd.entries <- entry :: hd.entries
 
@@ -91,14 +91,14 @@ let close_scope loc (sym_tbl : symbol_table) =
 let declare_function
     ( (id : string),
       (params : param_def list),
-      (type_t : ret_type),
+      (ret_type : ret_type),
       (loc : loc),
       (sym_tbl : symbol_table) ) =
   let func_decl =
     {
       id;
       params;
-      type_t;
+      ret_type;
       local_defs = [];
       body = None;
       loc;
@@ -118,7 +118,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "n";
-            type_t = Scalar Int;
+            param_type = Scalar Int;
             pass_by = Value;
             frame_offset = 1;
             parent_path = [];
@@ -126,7 +126,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
           };
           {
             id = "s";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 2;
             parent_path = [];
@@ -140,7 +140,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "c";
-            type_t = Scalar Char;
+            param_type = Scalar Char;
             pass_by = Value;
             frame_offset = 1;
             parent_path = [];
@@ -154,7 +154,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "i";
-            type_t = Scalar Int;
+            param_type = Scalar Int;
             pass_by = Value;
             frame_offset = 1;
             parent_path = [];
@@ -168,7 +168,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "s";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
             parent_path = [ "writeString" ];
@@ -182,7 +182,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "c";
-            type_t = Scalar Char;
+            param_type = Scalar Char;
             pass_by = Value;
             frame_offset = 1;
             parent_path = [];
@@ -196,7 +196,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "i";
-            type_t = Scalar Int;
+            param_type = Scalar Int;
             pass_by = Value;
             frame_offset = 1;
             parent_path = [];
@@ -210,7 +210,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "trg";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
             parent_path = [];
@@ -218,7 +218,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
           };
           {
             id = "src";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 2;
             parent_path = [];
@@ -232,7 +232,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "s1";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
             parent_path = [];
@@ -240,7 +240,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
           };
           {
             id = "s2";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 2;
             parent_path = [];
@@ -254,7 +254,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "trg";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
             parent_path = [];
@@ -262,7 +262,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
           };
           {
             id = "src";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 2;
             parent_path = [];
@@ -276,7 +276,7 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
         [
           {
             id = "s";
-            type_t = Array (Char, [ None ]);
+            param_type = Array (Char, [ None ]);
             pass_by = Reference;
             frame_offset = 1;
             parent_path = [];
