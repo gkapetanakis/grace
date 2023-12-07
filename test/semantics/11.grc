@@ -7,6 +7,6 @@ fun check_array_spill(): nothing
     writeInteger(b);
     
     if (b # 1) then {
-        writeString("Error: structs should allow spilling from array to variables defined contiguously in structs. Just like C does.\n")
+        writeString("Error: structs should allow spilling from array to variables defined contiguously in structs. Just like C does.\n");
     }
 }
