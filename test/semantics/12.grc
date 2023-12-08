@@ -4,12 +4,6 @@ $ it's an erroneous program, but it's up to the developer to solve the error
 $ we decided to not always force a return statement at the main block of each non-void function
 
 fun check_return_paths(): nothing
-    fun f(): int
-        var i: int;
-    {
-        i <- 1;
-        while i > 0 do return 1;
-    }
 {
-    f();
+    
 }

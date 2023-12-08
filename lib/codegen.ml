@@ -202,9 +202,9 @@ let init_codegen filename =
             match (passed_by, data_type) with
             | Ast.Value, Ast.Array _ ->
                 let l_val_ptr = gen_l_value frame caller_path l_v in
-                Llvm.build_gep l_val_ptr [| c32 0; c32 0 |] "array_ptr" builder
+                Llvm.build_gep l_val_ptr [| c32 0; c32 0 |] "array_elemptr" builder
                 (*
-          Llvm.build_struct_gep l_val_ptr 0 "array_ptr" builder
+          Llvm.build_struct_gep l_val_ptr 0 "array_elemptr" builder
           PROBABLY EQUIVALENT CODE, MIGHT CHECK LATER  
         *)
             | _ -> gen_l_value frame caller_path l_v)
@@ -218,7 +218,7 @@ let init_codegen filename =
                       let l_val_ptr = gen_l_value frame caller_path l_v in
                       Llvm.build_gep l_val_ptr
                         [| c32 0; c32 0 |]
-                        "array_ptr" builder
+                        "array_elemptr" builder
                     else gen_l_value frame caller_path l_v
                 | _ -> gen_l_value frame caller_path l_v)
             | _ -> gen_l_value frame caller_path l_v))
