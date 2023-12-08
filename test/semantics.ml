@@ -54,6 +54,7 @@ let link_to_exe filename =
 let () =
   let path = "semantics/" in
   let files =
+    (* fix later, make it sort by number *)
     List.sort String.compare
       (List.filter
          (fun f -> Filename.check_suffix f ".grc")

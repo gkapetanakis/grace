@@ -153,9 +153,9 @@ let init_codegen filename =
     | Ast.Id l_val_id -> gen_l_val_id frame caller_path l_val_id
     | Ast.LString Ast.{ id; _ } ->
         let str = Llvm.build_global_string id "str" builder in
+        (* returns i8* - matches how parameters are passed, because global strings
+           are only passed by reference as parameters *)
         Llvm.build_struct_gep str 0 "str_ptr" builder
-    (* returns i8* - matches how parameters are passed, because global strings
-       are only passed by reference as parameters *)
   and gen_l_value frame caller_path (lv : Ast.l_value) =
     match lv with
     | Ast.Simple slv -> gen_simple_l_value frame caller_path slv
@@ -202,7 +202,9 @@ let init_codegen filename =
             match (passed_by, data_type) with
             | Ast.Value, Ast.Array _ ->
                 let l_val_ptr = gen_l_value frame caller_path l_v in
-                Llvm.build_gep l_val_ptr [| c32 0; c32 0 |] "array_elemptr" builder
+                Llvm.build_gep l_val_ptr
+                  [| c32 0; c32 0 |]
+                  "array_elemptr" builder
                 (*
           Llvm.build_struct_gep l_val_ptr 0 "array_elemptr" builder
           PROBABLY EQUIVALENT CODE, MIGHT CHECK LATER  
@@ -502,7 +504,8 @@ let init_codegen filename =
         | Ast.Nothing -> ignore (Llvm.build_ret_void builder)
         | _ ->
             raise
-              (Error.Codegen_error (func.loc, "Non-nothing function does not return a value")))
+              (Error.Codegen_error
+                 (func.loc, "Non-nothing function does not return a value")))
     | Some _ -> ()
   in
 
