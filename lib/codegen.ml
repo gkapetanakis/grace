@@ -298,9 +298,10 @@ let init_codegen filename =
         in
         Llvm.position_at_end rhs_block builder;
         let rhs = gen_cond frame caller_path cond2 in
+        let the_rhs_block = Llvm.insertion_block builder in
         let _ = Llvm.build_br merge_block builder in
         Llvm.position_at_end merge_block builder;
-        Llvm.build_phi [ (lhs, lhs_block); (rhs, rhs_block) ] "phi" builder
+        Llvm.build_phi [ (lhs, lhs_block); (rhs, the_rhs_block) ] "phi" builder
     | Ast.CompOp (expr1, op, expr2) -> (
         let lhs = gen_expr frame caller_path expr1 in
         let rhs = gen_expr frame caller_path expr2 in
