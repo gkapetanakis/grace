@@ -32,6 +32,8 @@ let compile_to_obj filename =
         Grace_lib.Error.pr_semantic_error (loc, msg)
     | Grace_lib.Error.Symbol_table_error (loc, msg) ->
         Grace_lib.Error.pr_symbol_table_error (loc, msg)
+    | Grace_lib.Error.Codegen_error (loc, msg) ->
+        Grace_lib.Error.pr_codegen_error (loc, msg)
     | Grace_lib.Error.Internal_compiler_error msg ->
         Grace_lib.Error.pr_internal_compiler_error msg
     | err -> raise err)

@@ -319,21 +319,26 @@ let init_codegen filename =
 
   let rec gen_block frame caller_path (block : Ast.block)
       (ret_type : Ast.ret_type) =
-    let rec aux = function
-      | [] -> ()
-      | hd :: tl -> (
+    let rec aux stmts returned =
+      match (stmts, returned) with
+      | [], _ -> ()
+      | hd :: tl, false -> (
           gen_stmt frame caller_path hd ret_type;
           match Llvm.block_terminator (Llvm.insertion_block builder) with
-          | None -> aux tl
+          | None -> aux tl false
           | Some inst -> (
               match Llvm.instr_opcode inst with
-              | Llvm.Opcode.Ret -> aux []
-              | _ -> aux tl))
+              | Llvm.Opcode.Ret -> aux tl true
+              | _ -> aux tl false))
+      | hd :: _, true ->
+          prerr_endline
+            ("Warning: unreachable code at "
+            ^ Error.string_of_loc (Ast.get_loc_stmt hd))
     in
-    aux block.stmts
+    aux block.stmts false
   and gen_stmt frame caller_path (stmt : Ast.stmt) (ret_type : Ast.ret_type) =
     match stmt with
-    | Ast.Empty _ -> Llvm.build_is_null (c32 0) "empty" builder |> ignore
+    | Ast.Empty _ -> ()
     | Ast.Assign (l_val, expr) ->
         let rhs = gen_expr frame caller_path expr in
         let l_val_ptr = gen_l_value frame caller_path l_val in
@@ -351,9 +356,9 @@ let init_codegen filename =
         let merge_block = Llvm.append_block context "merge" func in
         let _ = Llvm.build_cond_br cond then_block else_block builder in
         Llvm.position_at_end then_block builder;
+        (* stmt1_o will never be None *)
         gen_stmt frame caller_path (Option.get stmt1_o) ret_type;
 
-        (* will never be None *)
         (match Llvm.block_terminator (Llvm.insertion_block builder) with
         | None -> ignore (Llvm.build_br merge_block builder)
         | Some inst -> (
@@ -394,27 +399,31 @@ let init_codegen filename =
         | Some _ -> ());
         Llvm.position_at_end merge_block builder
     | Return { expr_o; _ } -> (
+        (* semantic analysis should make some of the below cases impossible,
+           but you can never be too safe *)
         match (ret_type, expr_o) with
+        (* possible case 1 *)
         | Ast.Nothing, None -> ignore (Llvm.build_ret_void builder)
+        (* possible case 2 *)
         | Ast.Nothing, Some expr ->
             let _ =
               match expr with
               | Ast.EFuncCall Ast.{ ret_type; _ } ->
                   if ret_type <> Ast.Nothing then
                     raise
-                      (Error.Codegen_error
-                         ( Ast.get_loc_expr expr,
-                           "return expression should be of type nothing" ))
-              | _ -> ()
+                      (Error.Internal_compiler_error
+                         "Impossible (gen_expr, Return, 1)")
+              | _ ->
+                  raise
+                    (Error.Internal_compiler_error
+                       "Impossible (gen_expr, Return, 2)")
             in
             ignore (gen_expr frame caller_path expr);
             ignore (Llvm.build_ret_void builder)
         | _, None ->
             raise
-              (Error.Codegen_error
-                 ( Ast.get_loc_stmt stmt,
-                   "return expression must be of the same type as the function \
-                    return type" ))
+              (Error.Internal_compiler_error "Impossible (gen_expr, Return, 3)")
+        (* possible case 3 *)
         | _, Some expr ->
             let ret_val = gen_expr frame caller_path expr in
             ignore (Llvm.build_ret ret_val builder))
@@ -493,7 +502,7 @@ let init_codegen filename =
         | Ast.Nothing -> ignore (Llvm.build_ret_void builder)
         | _ ->
             raise
-              (Error.Codegen_error (func.loc, "Function must return a value")))
+              (Error.Codegen_error (func.loc, "Non-nothing function does not return a value")))
     | Some _ -> ()
   in
 

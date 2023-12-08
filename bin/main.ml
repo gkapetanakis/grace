@@ -132,17 +132,23 @@ let () =
       exit exit_code
   with
   | Grace_lib.Error.Lexing_error (loc, msg) ->
-      Grace_lib.Error.pr_lexing_error (loc, msg)
+      Grace_lib.Error.pr_lexing_error (loc, msg);
+      exit 1
   | Grace_lib.Parser.Error ->
       (* built-in Menhir error... *)
       Grace_lib.Error.pr_parser_error
         ( (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf),
-          "Syntax error" )
+          "Syntax error" );
+      exit 1
   | Grace_lib.Error.Semantic_error (loc, msg) ->
-      Grace_lib.Error.pr_semantic_error (loc, msg)
+      Grace_lib.Error.pr_semantic_error (loc, msg);
+      exit 1
   | Grace_lib.Error.Symbol_table_error (loc, msg) ->
-      Grace_lib.Error.pr_symbol_table_error (loc, msg)
+      Grace_lib.Error.pr_symbol_table_error (loc, msg);
+      exit 1
   | Grace_lib.Error.Codegen_error (loc, msg) ->
-      Grace_lib.Error.pr_codegen_error (loc, msg)
+      Grace_lib.Error.pr_codegen_error (loc, msg);
+      exit 1
   | Grace_lib.Error.Internal_compiler_error msg ->
-      Grace_lib.Error.pr_internal_compiler_error msg
+      Grace_lib.Error.pr_internal_compiler_error msg;
+      exit 1

@@ -1,6 +1,8 @@
 type loc = Lexing.position * Lexing.position
 
 exception Lexing_error of loc * string
+
+(* parsing error is the default error of menhir *)
 exception Semantic_error of loc * string
 exception Symbol_table_error of loc * string
 exception Internal_compiler_error of string

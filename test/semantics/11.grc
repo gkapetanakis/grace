@@ -1,3 +1,5 @@
+$ weird test but ok
+
 fun check_array_spill(): nothing
     var a : int[1];
     var b : int;
