@@ -287,10 +287,11 @@ let init_codegen filename =
             Llvm.build_not rhs "not" builder)
     | Ast.BinLogicOp (cond1, op, cond2) ->
         let lhs = gen_cond frame caller_path cond1 in
-        let lhs_block = Llvm.insertion_block builder in
-        let func = Llvm.block_parent lhs_block in
+        let func = Llvm.block_parent (Llvm.insertion_block builder) in
         let rhs_block = Llvm.append_block context "rhs" func in
         let merge_block = Llvm.append_block context "merge" func in
+
+        let lhs_block_final = Llvm.insertion_block builder in
         let _ =
           match op with
           | Ast.And -> Llvm.build_cond_br lhs rhs_block merge_block builder
@@ -298,10 +299,12 @@ let init_codegen filename =
         in
         Llvm.position_at_end rhs_block builder;
         let rhs = gen_cond frame caller_path cond2 in
-        let the_rhs_block = Llvm.insertion_block builder in
+        let rhs_block_final = Llvm.insertion_block builder in
         let _ = Llvm.build_br merge_block builder in
         Llvm.position_at_end merge_block builder;
-        Llvm.build_phi [ (lhs, lhs_block); (rhs, the_rhs_block) ] "phi" builder
+        Llvm.build_phi
+          [ (lhs, lhs_block_final); (rhs, rhs_block_final) ]
+          "cond_phi" builder
     | Ast.CompOp (expr1, op, expr2) -> (
         let lhs = gen_expr frame caller_path expr1 in
         let rhs = gen_expr frame caller_path expr2 in
@@ -314,11 +317,12 @@ let init_codegen filename =
         | Ast.Leq -> Llvm.build_icmp Llvm.Icmp.Sle lhs rhs "leq" builder)
   in
 
-  let rec gen_block frame caller_path (block : Ast.block) =
+  let rec gen_block frame caller_path (block : Ast.block)
+      (ret_type : Ast.ret_type) =
     let rec aux = function
       | [] -> ()
       | hd :: tl -> (
-          gen_stmt frame caller_path hd;
+          gen_stmt frame caller_path hd ret_type;
           match Llvm.block_terminator (Llvm.insertion_block builder) with
           | None -> aux tl
           | Some inst -> (
@@ -327,18 +331,18 @@ let init_codegen filename =
               | _ -> aux tl))
     in
     aux block.stmts
-  and gen_stmt frame caller_path (stmt : Ast.stmt) =
+  and gen_stmt frame caller_path (stmt : Ast.stmt) (ret_type : Ast.ret_type) =
     match stmt with
     | Ast.Empty _ -> Llvm.build_is_null (c32 0) "empty" builder |> ignore
     | Ast.Assign (l_val, expr) ->
         let rhs = gen_expr frame caller_path expr in
         let l_val_ptr = gen_l_value frame caller_path l_val in
         ignore (Llvm.build_store rhs l_val_ptr builder)
-    | Ast.Block block -> gen_block frame caller_path block
+    | Ast.Block block -> gen_block frame caller_path block ret_type
     | Ast.SFuncCall func_call ->
         ignore (gen_func_call frame caller_path func_call)
-    | Ast.If (cond, stmt1_o, stmt2_o) ->
-        let ret_insts = ref [] in
+    | Ast.If (cond, stmt1_o, stmt2_o) -> (
+        let ret_count = ref 0 in
         let cond = gen_cond frame caller_path cond in
         let func = Llvm.block_parent (Llvm.insertion_block builder) in
 
@@ -347,57 +351,33 @@ let init_codegen filename =
         let merge_block = Llvm.append_block context "merge" func in
         let _ = Llvm.build_cond_br cond then_block else_block builder in
         Llvm.position_at_end then_block builder;
-        gen_stmt frame caller_path (Option.get stmt1_o);
+        gen_stmt frame caller_path (Option.get stmt1_o) ret_type;
 
         (* will never be None *)
         (match Llvm.block_terminator (Llvm.insertion_block builder) with
         | None -> ignore (Llvm.build_br merge_block builder)
         | Some inst -> (
             match Llvm.instr_opcode inst with
-            | Llvm.Opcode.Ret -> ret_insts := inst :: !ret_insts
+            | Llvm.Opcode.Ret -> ret_count := !ret_count + 1
             | _ -> ()));
 
         Llvm.position_at_end else_block builder;
-
         if Option.is_some stmt2_o then
-          gen_stmt frame caller_path (Option.get stmt2_o);
+          gen_stmt frame caller_path (Option.get stmt2_o) ret_type;
 
         (match Llvm.block_terminator (Llvm.insertion_block builder) with
         | None -> ignore (Llvm.build_br merge_block builder)
         | Some inst -> (
             match Llvm.instr_opcode inst with
-            | Llvm.Opcode.Ret -> ret_insts := inst :: !ret_insts
+            | Llvm.Opcode.Ret -> ret_count := !ret_count + 1
             | _ -> ()));
 
         Llvm.position_at_end merge_block builder;
-        if
-          List.length !ret_insts = 2
-          && Llvm.num_operands (List.hd !ret_insts) = 1
-        then (
-          let else_inst = List.hd !ret_insts in
-          ret_insts := List.tl !ret_insts;
-          let then_inst = List.hd !ret_insts in
-
-          let then_val = Llvm.operand then_inst 0 in
-          let else_val = Llvm.operand else_inst 0 in
-
-          let then_block_final = Llvm.instr_parent then_inst in
-          Llvm.delete_instruction then_inst;
-          let then_builder = Llvm.builder_at_end context then_block_final in
-          ignore (Llvm.build_br merge_block then_builder);
-
-          let else_block_final = Llvm.instr_parent else_inst in
-          Llvm.delete_instruction else_inst;
-          let else_builder = Llvm.builder_at_end context else_block_final in
-          ignore (Llvm.build_br merge_block else_builder);
-
-          let ret_val =
-            Llvm.build_phi
-              [ (then_val, then_block_final); (else_val, else_block_final) ]
-              "phi" builder
-          in
-          ignore (Llvm.build_ret ret_val builder))
-        else ()
+        if !ret_count = 2 then
+          match ret_type with
+          | Ast.Nothing -> ignore (Llvm.build_ret_void builder)
+          | Ast.Char -> ignore (Llvm.build_ret (c8 0) builder)
+          | Ast.Int -> ignore (Llvm.build_ret (c32 0) builder))
     | Ast.While (cond, stmt) ->
         let func = Llvm.block_parent (Llvm.insertion_block builder) in
         let cond_block = Llvm.append_block context "cond" func in
@@ -408,22 +388,36 @@ let init_codegen filename =
         let cond = gen_cond frame caller_path cond in
         let _ = Llvm.build_cond_br cond body_block merge_block builder in
         Llvm.position_at_end body_block builder;
-        gen_stmt frame caller_path stmt;
+        gen_stmt frame caller_path stmt ret_type;
         (match Llvm.block_terminator (Llvm.insertion_block builder) with
         | None -> ignore (Llvm.build_br cond_block builder)
         | Some _ -> ());
         Llvm.position_at_end merge_block builder
     | Return { expr_o; _ } -> (
-        match expr_o with
-        | None -> ignore (Llvm.build_ret_void builder)
-        | Some expr -> (
+        match (ret_type, expr_o) with
+        | Ast.Nothing, None -> ignore (Llvm.build_ret_void builder)
+        | Ast.Nothing, Some expr ->
+            let _ =
+              match expr with
+              | Ast.EFuncCall Ast.{ ret_type; _ } ->
+                  if ret_type <> Ast.Nothing then
+                    raise
+                      (Error.Codegen_error
+                         ( Ast.get_loc_expr expr,
+                           "return expression should be of type nothing" ))
+              | _ -> ()
+            in
+            ignore (gen_expr frame caller_path expr);
+            ignore (Llvm.build_ret_void builder)
+        | _, None ->
+            raise
+              (Error.Codegen_error
+                 ( Ast.get_loc_stmt stmt,
+                   "return expression must be of the same type as the function \
+                    return type" ))
+        | _, Some expr ->
             let ret_val = gen_expr frame caller_path expr in
-            match expr with
-            | Ast.EFuncCall Ast.{ ret_type; _ } ->
-                if ret_type = Ast.Nothing then
-                  ignore (Llvm.build_ret_void builder)
-                else ignore (Llvm.build_ret ret_val builder)
-            | _ -> ignore (Llvm.build_ret ret_val builder)))
+            ignore (Llvm.build_ret ret_val builder))
   in
 
   let gen_func_decl (func : Ast.func) =
@@ -490,7 +484,9 @@ let init_codegen filename =
         0
         (Array.to_list (Llvm.params func_decl))
     in
-    gen_block frame (func.id :: func.parent_path) (Option.get func.body);
+    gen_block frame
+      (func.id :: func.parent_path)
+      (Option.get func.body) func.ret_type;
     match Llvm.block_terminator (Llvm.insertion_block builder) with
     | None -> (
         match func.ret_type with

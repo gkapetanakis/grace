@@ -70,14 +70,15 @@ fun main () : nothing
         i <- i + 1;
       }
       i <- 0;
-      j <- 0;
-      s <- 10;
-      while i < 10 do {
-        while (z[j][i] # 0) do {
-          z[j][i] <- a[i];
-          j <- j + 1;
+      s <- 0;
+      j <- 10;
+      while i < s and z[j][i] # 0 do {
+        z[j][i] <- a[i];
+        j <- j + 1;
+        if j >= 5 then {
+          j <- 0;
+          i <- i + 1;
         }
-        i <- i + 1;
       }
 
       i <- 0;

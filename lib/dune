@@ -1,6 +1,7 @@
 (library
  (name grace_lib)
- (modules (:standard \ codegen_other))
+ (modules
+  (:standard \ codegen_other))
  (libraries
   llvm
   llvm.all_backends
