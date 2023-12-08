@@ -349,8 +349,7 @@ let init_codegen filename =
         gen_stmt frame caller_path (Option.get stmt1_o);
 
         (* will never be None *)
-        let then_block_final = Llvm.insertion_block builder in
-        (match Llvm.block_terminator then_block_final with
+        (match Llvm.block_terminator (Llvm.insertion_block builder) with
         | None -> ignore (Llvm.build_br merge_block builder)
         | Some inst -> (
             match Llvm.instr_opcode inst with
@@ -362,8 +361,7 @@ let init_codegen filename =
         if Option.is_some stmt2_o then
           gen_stmt frame caller_path (Option.get stmt2_o);
 
-        let else_block_final = Llvm.insertion_block builder in
-        (match Llvm.block_terminator else_block_final with
+        (match Llvm.block_terminator (Llvm.insertion_block builder) with
         | None -> ignore (Llvm.build_br merge_block builder)
         | Some inst -> (
             match Llvm.instr_opcode inst with
@@ -382,17 +380,19 @@ let init_codegen filename =
           let then_val = Llvm.operand then_inst 0 in
           let else_val = Llvm.operand else_inst 0 in
 
+          let then_block_final = Llvm.instr_parent then_inst in
           Llvm.delete_instruction then_inst;
           let then_builder = Llvm.builder_at_end context then_block_final in
           ignore (Llvm.build_br merge_block then_builder);
 
+          let else_block_final = Llvm.instr_parent else_inst in
           Llvm.delete_instruction else_inst;
           let else_builder = Llvm.builder_at_end context else_block_final in
           ignore (Llvm.build_br merge_block else_builder);
 
           let ret_val =
             Llvm.build_phi
-              [ (then_val, then_block); (else_val, else_block) ]
+              [ (then_val, then_block_final); (else_val, else_block_final) ]
               "phi" builder
           in
           ignore (Llvm.build_ret ret_val builder))
