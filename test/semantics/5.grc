@@ -9,16 +9,28 @@ fun check_arithmetic_precedences(): nothing
         writeString("Error: '-' has higher precedence than '-'\n");
 
     if 6 div 3 + 1 # (6 div 3) + 1 then
-        writeString("Error: '+' has higher precedence then 'div'\n");
+        writeString("Error: '+' has higher precedence then 'div'(1)\n");
+
+    if 1 + 6 div 3 # 1 + (6 div 3) then
+        writeString("Error: '+' has higher precedence then 'div'(2)\n");
 
     if 6 div 3 - 1 # (6 div 3) - 1 then
-        writeString("Error: '-' has higher precedence than 'div'\n");
+        writeString("Error: '-' has higher precedence than 'div'(1)\n");
+
+    if 1 - 6 div 3 # 1 - (6 div 3) then
+        writeString("Error: '-' has higher precedence than 'div'(2)\n");
 
     if 6 mod 5 + 1 # (6 mod 5) + 1 then
-        writeString("Error: '+' has higher precedence than 'mod'\n");
+        writeString("Error: '+' has higher precedence than 'mod(1)'\n");
+
+    if 1 + 6 mod 5 # 1 + (6 mod 5) then
+        writeString("Error: '+' has higher precedence than 'mod(2)'\n");
 
     if 6 mod 5 - 1 # (6 mod 5) - 1 then
-        writeString("Error: '-' has higher precedence than 'mod'\n");
+        writeString("Error: '-' has higher precedence than 'mod(1)'\n");
+    
+    if 1 - 6 mod 5 # 1 - (6 mod 5) then
+        writeString("Error: '-' has higher precedence than 'mod(2)'\n");
 
     if 3 * 5 div 3 # (3 * 5) div 3 then
         writeString("Error: 'div' has higher precedence than '*'\n");
