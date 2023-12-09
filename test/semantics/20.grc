@@ -1,0 +1,12 @@
+$ check that return in while loop works as expected
+
+fun return_in_while_loop() : nothing
+    fun aux() : int
+    {
+        while 1 = 1 do return 0;
+        return 1;
+    }
+{
+    if aux() # 0 then
+        writeString("return_in_while_loop: failed\n");
+}
