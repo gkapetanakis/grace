@@ -17,7 +17,6 @@ type var_def = {
   var_type : var_type;
   frame_offset : int;
   parent_path : string list;
-  (* depth : int; *)
   loc : loc;
 }
 
@@ -27,7 +26,6 @@ type param_def = {
   pass_by : pass_by;
   mutable frame_offset : int;
   mutable parent_path : string list;
-  (* mutable depth : int; *)
   loc : loc;
 }
 
@@ -37,7 +35,6 @@ type l_value_id = {
   mutable passed_by : pass_by;
   mutable frame_offset : int;
   mutable parent_path : string list;
-  (* mutable depth : int; *)
   loc : loc;
 }
 
@@ -56,9 +53,7 @@ and func_call = {
   mutable args : (expr * pass_by) list;
   mutable ret_type : ret_type;
   mutable callee_path : string list;
-  (* mutable callee_depth : int; *)
   caller_path : string list;
-  (* caller_depth : int; *)
   loc : loc;
 }
 
@@ -94,7 +89,6 @@ type func = {
   mutable body : block option;
   loc : loc;
   parent_path : string list;
-  (*depth : int; *)
   status : func_status;
 }
 

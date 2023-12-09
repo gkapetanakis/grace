@@ -1,13 +1,24 @@
 open Error
-open Ast
 
 let start = 1
 let global_scope_name = "main"
 
+(* symbol table entry type type (see below to understand better) *)
 type entry_type =
-  | Variable of var_def ref
-  | Parameter of param_def ref
-  | Function of func ref
+  | Variable of Ast.var_def ref
+  | Parameter of Ast.param_def ref
+  | Function of Ast.func ref
+
+(* symbol table entry and scope types *)
+type entry = { id : string; entry_type : entry_type; scope : scope ref }
+and scope = { mutable next_offset : int; mutable entries : entry list }
+
+(* symbol table type *)
+type symbol_table = {
+  mutable scopes : scope list;
+  table : (string, entry) Hashtbl.t;
+  mutable parent_path : string list; (*mutable depth : int; *)
+}
 
 let get_loc_entry_type (entry_type : entry_type) =
   match entry_type with
@@ -27,9 +38,6 @@ let get_return_type_entry_type (entry_type : entry_type) =
   | _ ->
       raise (Internal_compiler_error "Tried to get return type of non-function")
 
-type entry = { id : string; entry_type : entry_type; scope : scope ref }
-and scope = { mutable next_offset : int; mutable entries : entry list }
-
 let get_loc_entry (entry : entry) = get_loc_entry_type entry.entry_type
 
 let get_data_type_entry (entry : entry) =
@@ -37,12 +45,6 @@ let get_data_type_entry (entry : entry) =
 
 let get_return_type_entry (entry : entry) =
   get_return_type_entry_type entry.entry_type
-
-type symbol_table = {
-  mutable scopes : scope list;
-  table : (string, entry) Hashtbl.t;
-  mutable parent_path : string list; (*mutable depth : int; *)
-}
 
 let get_and_increment_offset (sym_tbl : symbol_table) =
   let scope = List.hd sym_tbl.scopes in
@@ -61,6 +63,7 @@ let insert loc (id : string) (entry_type : entry_type) (sym_tbl : symbol_table)
       Hashtbl.add sym_tbl.table id entry;
       hd.entries <- entry :: hd.entries
 
+(* lookup an id only in the current scope *)
 let lookup (id : string) (sym_tbl : symbol_table) =
   match sym_tbl.scopes with
   | [] -> None
@@ -69,6 +72,7 @@ let lookup (id : string) (sym_tbl : symbol_table) =
       | None -> None
       | Some entry -> if !(entry.scope) == hd then Some entry else None)
 
+(* lookup an id in all scopes *)
 let lookup_all (id : string) (sym_tbl : symbol_table) =
   match sym_tbl.scopes with
   | [] -> None
@@ -91,42 +95,48 @@ let close_scope loc (sym_tbl : symbol_table) =
       | _ :: t -> sym_tbl.parent_path <- t
       | _ -> ())
 
+(* create an Ast.func object from the arguments and insert it into a symbol table *)
 let declare_function
     ( (id : string),
-      (params : param_def list),
-      (ret_type : ret_type),
+      (params : Ast.param_def list),
+      (ret_type : Ast.ret_type),
       (loc : loc),
       (sym_tbl : symbol_table) ) =
   let func_decl =
-    {
-      id;
-      params;
-      ret_type;
-      local_defs = [];
-      body = None;
-      loc;
-      parent_path = [];
-      status = Declared;
-    }
+    Ast.
+      {
+        id;
+        params;
+        ret_type;
+        local_defs = [];
+        body = None;
+        loc;
+        parent_path = [];
+        status = Declared;
+      }
   in
   let entry_type = Function (ref func_decl) in
   insert loc id entry_type sym_tbl
 
+(* insert Ast nodes that represent the functions of Grace's runtime into a symbol table *)
 let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
   let runtime_lib =
     [
-      ("readChar", [], Char, loc, sym_tbl);
-      ("readInteger", [], Int, loc, sym_tbl);
+      (* id, params, return type, loc, symbol table *)
+      ("readChar", [], Ast.Char, loc, sym_tbl);
+      ("readInteger", [], Ast.Int, loc, sym_tbl);
       ( "readString",
         [
-          {
-            id = "n";
-            param_type = Scalar Int;
-            pass_by = Value;
-            frame_offset = 1;
-            parent_path = [ "readString" ];
-            loc;
-          };
+          (* Ast.param_def *)
+          Ast.
+            {
+              id = "n";
+              param_type = Scalar Int;
+              pass_by = Value;
+              frame_offset = 1;
+              parent_path = [ "readString" ];
+              loc;
+            };
           {
             id = "s";
             param_type = Array (Char, [ None ]);
@@ -293,6 +303,8 @@ let declare_runtime (loc : loc) (sym_tbl : symbol_table) =
   in
   List.iter (fun func -> declare_function func) runtime_lib
 
+(* remove the runtime nodes from a symbol table after parsing is done to
+   not leave lingering definitions in it *)
 let remove_runtime (sym_tbl : symbol_table) =
   let runtime_lib =
     [

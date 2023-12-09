@@ -1,3 +1,5 @@
+(* tokens used both by the lexer and the parser *)
+
 (* varible identifiers *)
 %token <string> ID
 
@@ -60,7 +62,6 @@
 %left OR
 %left AND
 %nonassoc UNOT
-// %nonassoc UCOMP
 %left PLUS MINUS
 %left MULT DIV MOD
 %nonassoc USIGN

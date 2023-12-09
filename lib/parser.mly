@@ -1,5 +1,6 @@
 %{
   open Wrapper
+  (* symbol table *)
   let tbl = ref (create_sym_tbl ())
 %}
 
@@ -113,9 +114,9 @@ let expr :=
   | fc = func_call;
     { wrap_expr_func_call $loc fc !tbl }
   | op = un_arit_op; e = expr; %prec USIGN
-    { wrap_expr_un_arit_op $loc op e !tbl }  (* Semantic: e should be int *)
+    { wrap_expr_un_arit_op $loc op e !tbl }
   | e1 = expr;  op = bin_arit_op; e2 = expr;
-    { wrap_expr_bin_arit_op $loc op e1 e2 !tbl } (* Semantic: e1, e2 should be both int *)
+    { wrap_expr_bin_arit_op $loc op e1 e2 !tbl }
 
 let cond :=
   | LEFT_PAR; c = cond; RIGHT_PAR;
@@ -123,9 +124,9 @@ let cond :=
   | op = un_logic_op; c = cond; %prec UNOT
     { wrap_cond_un_logic_op $loc op c !tbl }
   | c1 = cond; op = bin_logic_op; c2 = cond;
-    { wrap_cond_bin_logic_op $loc op c1 c2 !tbl } (* AND/OR should be short-circuited, added after semantic analysis? *)
-  | e1 = expr; op = comp_op ; e2 = expr; (* %prec UCOMP *)
-    { wrap_cond_comp_op $loc op e1 e2 !tbl } (* Semantic: e{1,2} should be both int or both char *)
+    { wrap_cond_bin_logic_op $loc op c1 c2 !tbl }
+  | e1 = expr; op = comp_op ; e2 = expr;
+    { wrap_cond_comp_op $loc op e1 e2 !tbl }
 
 let block :=
   | LEFT_CURL; stmts = list(stmt); RIGHT_CURL;

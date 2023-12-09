@@ -1,3 +1,6 @@
+(* functions for printing Ast nodes in a readable manner
+   (used only during debugging) *)
+
 open Ast
 
 let sep, endl = ("--", "\n")
