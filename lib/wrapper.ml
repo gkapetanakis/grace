@@ -187,7 +187,7 @@ let wrap_stmt_assign _loc lv e sym_tbl =
   enjoy sem stmt
 
 (* note: blocks don't cause the opening of new scopes,
-    as Grace does not allow the declaration of new variables
+   as Grace does not allow the declaration of new variables
    inside them *)
 let wrap_stmt_block _loc b sym_tbl =
   let stmt : Ast.stmt = Block b in
@@ -289,6 +289,17 @@ let wrap_local_def_fdecl (func : Ast.func) = [ Ast.FuncDecl func ]
 let wrap_local_def_var (vd_l : Ast.var_def list) =
   List.map (fun vd -> Ast.VarDef vd) vd_l
 
+(* after the Grace compiler creates an object file using LLVM,
+   clang is used to link that object file to Grace's runtime library,
+   as well as C's runtime library *)
+
+(* clang is made to natively support C-style main functions,
+   meaning ones called 'main' that return an integer *)
+
+(* therefore, to make our lives a bit easier, we insert a function into
+   the program called 'main' that calls the actual main function *)
+
+(* the following function does what is described above *)
 let insert_virtual_main (func : Ast.func) =
   let main_func : Ast.func =
     {
@@ -319,8 +330,8 @@ let insert_virtual_main (func : Ast.func) =
             loc = func.loc;
           };
       loc = func.loc;
+      (* it's the actual first function, so it has no parent *)
       parent_path = [];
-      (* doesn't need global or whatever at the start of its name *)
       status = Defined;
     }
   in
