@@ -1,14 +1,27 @@
-$ and/or short-circuit
+$ strcpy, strlen, strcmp, strcat, <=, >=
 
-fun check_short_circuit(): nothing
-    fun f(ref s: char[]): int
-    {
-        writeString("Error: '");
-        writeString(s);
-        writeString("' short-circuiting does not work\n");
-        return 1;
-    }
+fun check_string_manipulation(): nothing
+    var s: char[12];
 {
-    if 0 = 1 and f("and") > 0 then ;
-    if 1 = 1 or f("or") > 0 then ;
+    strcpy(s, "Hello");
+    writeString(s);
+    writeChar('\n');
+
+    writeInteger(strlen(s));
+    writeChar('\n');
+
+    writeInteger(strcmp(s, "Hello"));
+    writeChar('\n');
+
+    writeInteger(strcmp("Hello", s));
+    writeChar('\n');
+
+    if strcmp(s, "Hell") <= 0 then
+        writeString("Error: expected positive, strcmp returned non positive\n");
+
+    if strcmp("Hell", s) >= 0 then
+        writeString("Error: expected negative, strcmp returned non negative\n");
+
+    strcat(s, " World\n");
+    writeString(s);
 }

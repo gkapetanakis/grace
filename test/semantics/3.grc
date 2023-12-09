@@ -1,24 +1,33 @@
-$ and, or, not
+$ var, <-
 
-fun check_logical_precedences(): nothing
-    var a: int;
-    var b: int;
+fun check_variables(): nothing
+    var i: int;
+    var c: char;
+    var s: char[6];
+    var ss: char[1][6];
 {
-    a <- 0;
-    b <- 0;
-    if 1 = 2 and 1 = 2 or 1 = 1 then a <- 1;
-    if (1 = 2 and 1 = 2) or 1 = 1 then b <- 1;
-    if a # b then writeString("Error: 'or' has higher precedence than 'and'\n");
+    i <- 42;
+    c <- 'A';
+    s[0] <- 'H';
+    s[1] <- 'e';
+    s[2] <- 'l';
+    s[3] <- 'l';
+    s[4] <- 'o';
+    s[5] <- '\0';
 
-    a <- 0;
-    b <- 0;
-    if not 1 = 2 and 1 = 2 then a <- 1;
-    if (not 1 = 2) and 1 = 2 then b <- 1;
-    if a # b then writeString("Error: 'and' has higher precedence than 'not'\n");
+    ss[0][0] <- 'W';
+    ss[0][1] <- 'o';
+    ss[0][2] <- 'r';
+    ss[0][3] <- 'l';
+    ss[0][4] <- 'd';
+    ss[0][5] <- '\0';
 
-    a <- 0;
-    b <- 0;
-    if not 1 = 1 or 1 = 1 then a <- 1;
-    if (not 1 = 1) or 1 = 1 then b <- 1;
-    if a # b then writeString("Error: 'or' has higher precedence than 'not'\n");
+    writeInteger(i);
+    writeChar('\n');
+    writeChar(c);
+    writeChar('\n');
+    writeString(s);
+    writeChar(' ');
+    writeString(ss[0]);
+    writeChar('\n');
 }

@@ -1,14 +1,24 @@
-$ recursion
+$ and, or, not
 
-fun check_recursion(): nothing
-    var i, res: int;
-    fun fib(n: int): int
-    {
-        if n <= 1 then return n;
-        return fib(n - 1) + fib(n - 2);
-    }
+fun check_logical_precedences(): nothing
+    var a: int;
+    var b: int;
 {
-    res <- fib(10);
-    if res # 55 then
-        writeString("Error: recursion did not work as expected\n");
+    a <- 0;
+    b <- 0;
+    if 1 = 2 and 1 = 2 or 1 = 1 then a <- 1;
+    if (1 = 2 and 1 = 2) or 1 = 1 then b <- 1;
+    if a # b then writeString("Error: 'or' has higher precedence than 'and'\n");
+
+    a <- 0;
+    b <- 0;
+    if not 1 = 2 and 1 = 2 then a <- 1;
+    if (not 1 = 2) and 1 = 2 then b <- 1;
+    if a # b then writeString("Error: 'and' has higher precedence than 'not'\n");
+
+    a <- 0;
+    b <- 0;
+    if not 1 = 1 or 1 = 1 then a <- 1;
+    if (not 1 = 1) or 1 = 1 then b <- 1;
+    if a # b then writeString("Error: 'or' has higher precedence than 'not'\n");
 }

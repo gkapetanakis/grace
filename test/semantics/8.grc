@@ -1,8 +1,13 @@
-fun check_string_termination(): nothing
-    fun aux(ref s: char[1]): nothing
+$ recursion
+
+fun check_recursion(): nothing
+    var i: int;
+    fun fib(n: int): int
     {
+        if n <= 1 then return n;
+        return fib(n - 1) + fib(n - 2);
     }
 {
-    aux("a");
-    aux("a\0\0\0");
+    if fib(10) # 55 then
+        writeString("Error: recursion did not work as expected\n");
 }

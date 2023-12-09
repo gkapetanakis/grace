@@ -1,3 +1,5 @@
+$ mutual recursion
+
 fun check_mutual_recursion(): nothing
     fun is_odd(y: int): int;
 

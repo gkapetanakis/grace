@@ -1,12 +1,40 @@
-$ while
+$ +, -, div, mod, #
 
-fun check_while(): nothing
-    var i: int;
+fun check_arithmetic_precedences(): nothing
 {
-    i <- 0;
-    while i < 10 do
-        i <- i + 1;
+    if 1 + 2 * 3 # 1 + (2 * 3) then
+        writeString("Error: '+' has higher precedence than '*'\n");
 
-    if i # 10 then
-        writeString("Error: 'while' loop executed more times than expected\n");
+    if 1 - 2 * 3 # 1 - (2 * 3) then
+        writeString("Error: '-' has higher precedence than '-'\n");
+
+    if 6 div 3 + 1 # (6 div 3) + 1 then
+        writeString("Error: '+' has higher precedence then 'div'\n");
+
+    if 6 div 3 - 1 # (6 div 3) - 1 then
+        writeString("Error: '-' has higher precedence than 'div'\n");
+
+    if 6 mod 5 + 1 # (6 mod 5) + 1 then
+        writeString("Error: '+' has higher precedence than 'mod'\n");
+
+    if 6 mod 5 - 1 # (6 mod 5) - 1 then
+        writeString("Error: '-' has higher precedence than 'mod'\n");
+
+    if 3 * 5 div 3 # (3 * 5) div 3 then
+        writeString("Error: 'div' has higher precedence than '*'\n");
+
+    if 15 div 5 * 3 # (15 div 5) * 3 then
+        writeString("Error: '*' has higher precedence than 'div'\n");
+
+    if 3 * 5 mod 10 # (3 * 5) mod 10 then
+        writeString("Error: 'mod' has higher precedence than '*'\n");
+
+    if 11 mod 5 div 2 # (11 mod 5) div 2 then
+        writeString("Error: '*' has higher precedence than 'mod'\n");
+
+    if 5 div 3 mod 2 # (5 div 3) mod 2 then
+        writeString("Error: 'div' has higher precedence than 'mod'\n");
+
+    if 5 mod 5 div 2 # (5 mod 5) div 2 then
+        writeString("Error: 'mod' has higher precedence than 'div'\n");
 }

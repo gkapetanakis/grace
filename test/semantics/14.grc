@@ -1,0 +1,18 @@
+$ local variables in recursion
+
+fun check_recursion_local_variable() : nothing
+    fun rec(d: int) : nothing
+        var i : int;
+    {
+        if d > 1 then return;
+
+        i <- d;
+
+        rec(d + 1);
+
+        if d = 0 and i # 0 then
+            writeString("Error: local variable does not have the expected value\n");
+    }
+{
+    rec(0);
+}

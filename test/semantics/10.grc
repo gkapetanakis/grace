@@ -1,26 +1,14 @@
-fun check_different_struct_allocations() : nothing
-    fun aux(depth, input : int) : nothing
-        var a : int;
+$ and/or short-circuit
+
+fun check_short_circuit(): nothing
+    fun f(ref s: char[]): int
     {
-        if (depth > 1) then return;
-
-        a <- input;
-
-        if (depth = 0 and a # 0) then {
-            writeString("Error: local variable a of first call and input to first call should have the same value before calling second call\n");
-        }
-
-        if (depth > 0 and a # 1) then {
-            writeString("Error: local variable a of second call and input to second call should have the same value\n");
-        }
-
-        aux(depth + 1, input + 1);
-
-        if (depth = 0 and a # 0) then {
-            writeString("Error: local variable a of first call and input to first call should have the same value after second call\n");
-        }
+        writeString("Error: '");
+        writeString(s);
+        writeString("' short-circuiting does not work\n");
+        return 1;
     }
-
 {
-    aux(0,0);
+    if 0 = 1 and f("and") > 0 then ;
+    if 1 = 1 or f("or") > 0 then ;
 }

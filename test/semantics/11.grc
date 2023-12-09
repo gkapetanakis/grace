@@ -1,13 +1,12 @@
-$ weird test but ok
+$ while
 
-fun check_array_spill(): nothing
-    var a : int[1];
-    var b : int;
+fun check_while(): nothing
+    var i: int;
 {
-    b <- 0;
-    a[1] <- 1; $ this should spill to variable b, since a, b are defined contiguously in a structure
-    
-    if (b # 1) then {
-        writeString("Error: structs should allow spilling from array to variables defined contiguously in structs (just like C does)\n");
-    }
+    i <- 0;
+    while i < 10 do
+        i <- i + 1;
+
+    if i # 10 then
+        writeString("Error: 'while' loop executed more times than expected\n");
 }

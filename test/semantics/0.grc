@@ -1,43 +1,5 @@
-$ standard library functions
+$ simplest possible program
 
-fun check_libgrace(): nothing
-    var a: int;
-    var c: char;
-    var s: char[14];
-
-    fun newline(): nothing
-    {
-        writeChar('\n');
-    }
+fun check_compilation(): nothing
 {
-    a <- ascii('a');
-    c <- chr(a);
-
-    writeInteger(a);
-    newline();
-
-    writeChar(c);
-    newline();
-
-    strcpy(s, "Hello");
-    writeString(s);
-    newline();
-
-    writeInteger(strlen(s));
-    newline();
-
-    writeInteger(strcmp(s, "Hello"));
-    newline();
-
-    writeInteger(strcmp("Hello", s));
-    newline();
-
-    if strcmp(s, "Hell") <= 0 then
-        writeString("Error: expected positive, strcmp returned non positive\n");
-
-    if strcmp("Hell", s) >= 0 then
-        writeString("Error: expected negative, strcmp returned non negative\n");
-
-    strcat(s, " World\n");
-    writeString(s);
 }

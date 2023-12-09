@@ -1,0 +1,71 @@
+$ assignment inside function
+
+fun check_assignment_in_function(): nothing
+    var a, b, c: int;
+    var arr: int[3];
+    var marr: int[2][3];
+
+    fun f(a: int; ref b: int; ref c: int; ref arr: int[3]; ref marr: int[2][3]): nothing
+        var d: int;
+    {
+        a <- 2;
+        if a # 2 then
+            writeString("Error: scalar assignment (passed by value) failed (f1)\n");
+
+        b <- 2;
+        if b # 2 then
+            writeString("Error: scalar assignment (passed by reference) failed (f1)\n");
+
+        d <- a;
+        if d # a then
+            writeString("Error: local variable set to scalar (passed by value) failed\n");
+
+        d <- b;
+        if d # b then
+            writeString("Error: local variable set to scalar (passed by reference) failed\n");
+
+        a <- b;
+        if a # b then
+            writeString("Error: scalar (passed by value) set to scalar (passed by reference) failed\n");
+
+        c <- b;
+        if c # b then
+            writeString("Error: scalar (passed by reference) set to scalar (passed by reference) failed\n");
+
+        a <- d;
+        if a # d then
+            writeString("Error: scalar (passed by value) set to scalar (local variable) failed\n");
+
+        b <- d;
+        if b # d then
+            writeString("Error: scalar (passed by reference) set to scalar (local variable) failed\n");
+
+        arr[0] <- 3;
+        arr[1] <- 4;
+        arr[2] <- 5;
+        if arr[0] # 3 or arr[1] # 4 or arr[2] # 5 then
+            writeString("Error: array assignment (passed by reference) failed (f1)\n");
+
+        marr[0][0] <- 3;
+        marr[1][1] <- 4;
+        if marr[0][0] # 3 or marr[1][1] # 4 then
+            writeString("Error: multidimensional array assignment (passed by reference) failed (f2)\n");
+    }
+
+    fun f2(c: char; ref d: char; ref carr: char[6]): nothing
+    {
+        if c # '\0' then
+            writeString("Error: passing character by value by indexing string does not work correctly\n");
+
+        if d # '\0' then
+            writeString("Error: passing character by reference by indexing string does not work correctly\n");
+
+        if carr[0] # 'h' or carr[5] # '\0' then
+            writeString("Error: passing string as character array does not work correctly\n");
+    }
+{
+    a <- 1;
+    b <- 2;
+    c <- 3;
+    f(a, b, c, arr, marr);
+}

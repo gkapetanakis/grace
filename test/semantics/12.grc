@@ -1,138 +1,37 @@
-$ everything l-value related, and even some passing by reference
+$ pass by reference (and multiple times)
 
-fun check_l_values(): nothing
-    var a: int;
-    var arr: int[3];
-    var marr: int[2][2][3];
-
-    var b, c: int;
-
-    var str: char[6];
-
-    fun f1(a: int; ref b: int; ref arr: int[3]): nothing
+fun check_pass_by_reference(): nothing
+    fun f(ref i: int): nothing
     {
-        a <- 2;
-        if a # 2 then
-            writeString("Error: simple l-values assignment (passed by value) failed (f1)\n");
-
-        b <- 2;
-        if b # 2 then
-            writeString("Error: simple l-values assignment (passed by reference) failed (f1)\n");
-
-        arr[0] <- 3;
-        arr[1] <- 4;
-        arr[2] <- 5;
-        if arr[0] # 3 or arr[1] # 4 or arr[2] # 5 then
-            writeString("Error: array l-values assignment (passed by reference) failed (f1)\n"); 
+        i <- i + 1;
     }
 
-    fun f2(a: int; ref b: int; ref sarr: int[2][3]; ref arr: int[][2][3]): nothing
+    fun ff(ref i: int): nothing
     {
-        a <- 2;
-        if a # 2 then
-            writeString("Error: simple l-values assignment (passed by value) failed (f2)\n");
-
-        b <- 2;
-        if b # 2 then
-            writeString("Error: simple l-values assignment (passed by reference) failed (f2)\n");
-
-        sarr[0][0] <- 3;
-        sarr[1][1] <- 4;
-        if sarr[0][0] # 3 or sarr[1][1] # 4 then
-            writeString("Error: (sub-)array l-values assignment (passed by reference) failed (f2)\n");
-
-        arr[0][0][2] <- 5;
-        arr[0][1][0] <- 6;
-        if arr[0][0][2] # 5 or arr[0][1][0] # 6 then
-            writeString("Error: (multidimensional) array l-values assignment (passed by reference) failed (f2)\n");
+        i <- i + 1;
+        f(i);
     }
 
-    fun f3(a: int; ref b: int; ref c: int): nothing
-        var d: int;
+    fun fff(ref i: int): nothing
     {
-        d <- a;
-        if d # a then
-            writeString("Error: function local variable set to l-value as expression (passed by value) failed\n");
-
-        d <- b;
-        if d # b then
-            writeString("Error: function local variable set to l-value as expression (passed by reference) failed\n");
-
-        a <- b;
-        if a # b then
-            writeString("Error: function parameter (passed by value) set to l-value as expression (passed by reference) failed\n");
-
-        c <- b;
-        if c # b then
-            writeString("Error: function parameter (passed by reference) set to l-value as expression (passed by reference) failed\n");
-
-        a <- d;
-        if a # d then
-            writeString("Error: function parameter (passed by value) set to l-value as expression (local variable) failed\n");
-
-        b <- d;
-        if b # d then
-            writeString("Error: function parameter (passed by reference) set to l-value as expression (local variable) failed\n");
+        i <- i + 1;
+        ff(i);
     }
 
-    fun f4(c: char; ref d: char; ref carr: char[6]): nothing
-    {
-        if c # '\0' then
-            writeString("Error: passing character by value by indexing string does not work correctly\n");
-
-        if d # '\0' then
-            writeString("Error: passing character by reference by indexing string does not work correctly\n");
-
-        if carr[0] # 'h' or carr[5] # '\0' then
-            writeString("Error: passing string as character array does not work correctly\n");
-    }
+    var x: int;
 {
-    a <- 1;
-    if a # 1 then
-        writeString("Error: simple l-values assignment failed\n");
+    x <- 0;
+    f(x);
+    if x # 1 then
+        writeString("Error: (single) pass by reference did not work as expected\n");
 
-    arr[0] <- 2;
-    arr[1] <- 3;
-    arr[2] <- 4;
-    if arr[0] # 2 or arr[1] # 3 or arr[2] # 4 then
-        writeString("Error: array l-values assignment failed\n");
+    x <- 0;
+    ff(x);
+    if x # 2 then
+        writeString("Error: (double) pass by reference did not work as expected\n");
 
-    f1(a, a, arr);
-
-    if a # 2 then
-        writeString("Error: scalar passing by reference does not work correctly\n");
-
-    if arr[2] # 5 then
-        writeString("Error: array passing by reference does not work correctly\n");
-
-    if "hello"[0] # 'h' or "hello"[5] # '\0' then
-        writeString("Error: string literals not working as expected\n");
-
-    marr[0][0][1] <- 5;
-    if marr[0][0][1] # 5 then
-        writeString("Error: array multidimensional l-values assignment failed\n");
-
-    f2(marr[0][0][1], marr[0][0][1], marr[1], marr);
-
-    if marr[0][0][1] # 2 then
-        writeString("Error: multidimensional array scalar element passing by reference does not work correctly\n");
-
-    if marr[1][0][0] # 3 then
-        writeString("Error: multidimensional array subarray passing by reference does not work correctly\n");
-
-    if marr[0][1][0] # 6 then
-        writeString("Error: multidimensional array passing by reference does not work correctly\n");
-
-    b <- a;
-    c <- marr[0][1][0];
-    if b # 2 or c # 6 then
-        writeString("Error: l-value as expression does not work correctly\n");
-
-    f3(1, a, marr[0][1][0]);
-
-    f4("hello"[5], "hello"[5], "hello");
-
-    strcpy(str, "hello");
-
-    f4(str[5], str[5], str);
+    x <- 0;
+    fff(x);
+    if x # 3 then
+        writeString("Error: (triple) pass by reference did not work as expected\n");
 }

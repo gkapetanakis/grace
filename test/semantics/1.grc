@@ -1,14 +1,8 @@
-$ if, then, else
+$ writeInteger, writeChar, writeString, int/char/string literals
 
-fun check_if_then_else(): nothing
+fun check_printing(): nothing
 {
-    if 1 = 1 then ;
-    else writeString("Error: 'else' executed even though the condition was true\n");
-
-    if 1 = 2 then writeString("Error: 'if' executed even though the condition was false\n");
-    else ;
-
-    if 1 = 2 then
-        if 1 = 1 then ;
-        else writeString("Error: 'else' matched the outer 'if'\n");
+    writeInteger(0);
+    writeChar('\n');
+    writeString("Hello World\n");
 }

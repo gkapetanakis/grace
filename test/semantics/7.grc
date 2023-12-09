@@ -1,37 +1,11 @@
-$ pass by reference
+$ function call, return
 
-fun check_pass_by_reference(): nothing
-    fun f(ref i: int): nothing
+fun check_function_call(): nothing
+    fun f(): int
     {
-        i <- i + 1;
+        return 1;
     }
-
-    fun ff(ref i: int): nothing
-    {
-        i <- i + 1;
-        f(i);
-    }
-
-    fun fff(ref i: int): nothing
-    {
-        i <- i + 1;
-        ff(i);
-    }
-
-    var x: int;
 {
-    x <- 0;
-    f(x);
-    if x # 1 then
-        writeString("Error: (single) pass by reference did not work as expected\n");
-
-    x <- 0;
-    ff(x);
-    if x # 2 then
-        writeString("Error: (double) pass by reference did not work as expected\n");
-
-    x <- 0;
-    fff(x);
-    if x # 3 then
-        writeString("Error: (triple) pass by reference did not work as expected\n");
+    if f() # 1 then
+        writeString("Function call or return statement did not work as expected\n");
 }

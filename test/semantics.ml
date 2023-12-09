@@ -23,17 +23,22 @@ let compile_to_obj filename =
     Sys.remove (remove_extension filename ^ ".o");
     match err with
     | Grace_lib.Error.Lexing_error (loc, msg) ->
-        Grace_lib.Error.pr_lexing_error (loc, msg)
+        Grace_lib.Error.pr_lexing_error (loc, msg);
+        exit 1
     | Grace_lib.Parser.Error ->
         Grace_lib.Error.pr_parser_error
           ( (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf),
-            "Syntax error" )
+            "Syntax error" );
+        exit 1
     | Grace_lib.Error.Semantic_error (loc, msg) ->
-        Grace_lib.Error.pr_semantic_error (loc, msg)
+        Grace_lib.Error.pr_semantic_error (loc, msg);
+        exit 1
     | Grace_lib.Error.Symbol_table_error (loc, msg) ->
-        Grace_lib.Error.pr_symbol_table_error (loc, msg)
+        Grace_lib.Error.pr_symbol_table_error (loc, msg);
+        exit 1
     | Grace_lib.Error.Codegen_error (loc, msg) ->
-        Grace_lib.Error.pr_codegen_error (loc, msg)
+        Grace_lib.Error.pr_codegen_error (loc, msg);
+        exit 1
     | Grace_lib.Error.Internal_compiler_error msg ->
         Grace_lib.Error.pr_internal_compiler_error msg
     | err -> raise err)
@@ -49,13 +54,19 @@ let link_to_exe filename =
       (Printf.sprintf "%s -no-pie -o %s %s -L %s -l %s" linker output input
          runtime_path runtime_name)
     <> 0
-  then prerr_endline (filename ^ ": Linking failed")
+  then (
+    prerr_endline (filename ^ ": Linking failed");
+    exit 1)
 
 let () =
+  let my_compare x y =
+    if String.length x > String.length y then 1
+    else if String.length x < String.length y then -1
+    else String.compare x y
+  in
   let path = "semantics/" in
   let files =
-    (* fix later, make it sort by number *)
-    List.sort String.compare
+    List.sort my_compare
       (List.filter
          (fun f -> Filename.check_suffix f ".grc")
          (Array.to_list (Sys.readdir path)))
@@ -67,7 +78,7 @@ let () =
       link_to_exe filename)
     files;
   let executables =
-    List.sort String.compare
+    List.sort my_compare
       (List.filter
          (fun f -> Filename.check_suffix f ".exe")
          (Array.to_list (Sys.readdir path)))
