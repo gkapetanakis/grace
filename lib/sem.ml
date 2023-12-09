@@ -2,7 +2,8 @@ open Ast
 open Symbol
 open Error
 
-(* used to compare function declarations with definitions and find undefined declarations *)
+(* used to compare function declarations with definitions
+   and find undefined declarations *)
 module StringSet = Set.Make (String)
 
 (* before closing a scope check for lingering declarations *)

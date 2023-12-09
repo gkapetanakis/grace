@@ -35,6 +35,7 @@ let init_codegen filename =
     let ft = Llvm.function_type ret_type (Array.of_list args) in
     ignore (Llvm.declare_function name ft the_module)
   in
+  (* declare all of Grace's runtime library's functions *)
   List.iter declare_runtime_func
     [
       ("writeInteger", void_t, [ i32_t ]);
@@ -71,10 +72,8 @@ let init_codegen filename =
   (* just the var type (no pointers) *)
   let lltype_of_var_def (vd : Ast.var_def) = lltype_of_data_type vd.var_type in
 
-  (*
-  by value -> parameter type (no pointer)
-  by reference -> pointer to parameter type (scalar) or pointer to parameter element type (array)
-*)
+  (* by value -> parameter type (no pointer)
+     by reference -> pointer to parameter type (scalar) or pointer to parameter element type (array) *)
   let lltype_of_param_def (pd : Ast.param_def) =
     match pd.pass_by with
     | Ast.Value -> lltype_of_data_type pd.param_type

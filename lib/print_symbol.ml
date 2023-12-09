@@ -1,5 +1,5 @@
 (* functions for printing Symbol table entries in a readable manner
-   (used only during debugging) *)
+   (used only for debugging) *)
 
 open Symbol
 open Print_ast

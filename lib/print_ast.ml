@@ -1,5 +1,5 @@
 (* functions for printing Ast nodes in a readable manner
-   (used only during debugging) *)
+   (used only for debugging) *)
 
 open Ast
 

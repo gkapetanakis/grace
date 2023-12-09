@@ -24,4 +24,4 @@ clean:
 distclean: clean
 	rm -f *.a
 
-.PHONY: all clean cleanextras
+.PHONY: all clean distclean
