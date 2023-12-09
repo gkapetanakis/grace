@@ -1,0 +1,7 @@
+$ mismatched parameter count
+
+fun err_param_count(): nothing
+    fun f(): nothing {}
+{
+    f(5);
+}

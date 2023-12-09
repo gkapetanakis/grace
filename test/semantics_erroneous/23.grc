@@ -1,0 +1,7 @@
+$ index using string
+
+fun err_index(): nothing
+    var a: int[5];
+{
+    a["hello"] <- 1;
+}

@@ -1,0 +1,7 @@
+$ adding char to char
+
+fun err_add(): nothing
+    var c: char;
+{
+    c <- 'a' + 'b';
+}

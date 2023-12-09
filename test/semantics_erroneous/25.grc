@@ -1,0 +1,7 @@
+$ index non-array
+
+fun err_index(): nothing
+    var a: int;
+{
+    writeInteger(a[0]);
+}

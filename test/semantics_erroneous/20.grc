@@ -1,0 +1,6 @@
+$ assigning to non-existent variable
+
+fun err_assignment(): nothing
+{
+    a <- 1;
+}

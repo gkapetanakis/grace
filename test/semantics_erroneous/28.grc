@@ -1,0 +1,7 @@
+$ positive char
+
+fun err_unop(): nothing
+    var c: char;
+{
+    c <- +'a';
+}

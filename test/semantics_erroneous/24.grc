@@ -1,0 +1,7 @@
+$ index using char
+
+fun err_index(): nothing
+    var a: int[5];
+{
+    a['a'] <- 1;
+}

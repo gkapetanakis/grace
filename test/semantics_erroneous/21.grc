@@ -1,0 +1,7 @@
+$ assign to function
+
+fun err_assignment(): nothing
+    fun f(): nothing {}
+{
+    f <- 1;
+}

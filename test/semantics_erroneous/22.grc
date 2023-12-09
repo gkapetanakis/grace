@@ -1,0 +1,7 @@
+$ mismatched array index count
+
+fun err_index(): nothing
+    var a: int[1];
+{
+    a[0][0] <- 1;
+}
