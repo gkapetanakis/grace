@@ -87,13 +87,17 @@ let verify_param_def (pd : param_def) =
 
 let comp_var_param_types loc (vt : var_type) (pt : param_type) =
   match (vt, pt) with
-  | Array (t1, dims1), Array (t2, dims2) ->
+  | Array (t1, dims_var), Array (t2, dims_param) ->
       if t1 <> t2 then
         raise (Semantic_error (loc, "Array element type mismatch"))
-      else if List.length dims1 <> List.length dims2 then
+      else if List.length dims_var <> List.length dims_param then
         raise (Semantic_error (loc, "Array dimension count mismatch"))
-      else if List.hd dims2 = None then
-        let tl_dims1, tl_dims2 = (List.tl dims1, List.tl dims2) in
+      else
+        let check_dims_var, check_dims_param =
+          if List.hd dims_param = None then
+            (List.tl dims_var, List.tl dims_param)
+          else (dims_var, dims_param)
+        in
         List.iter2
           (fun dim1 dim2 ->
             match (dim1, dim2) with
@@ -102,7 +106,7 @@ let comp_var_param_types loc (vt : var_type) (pt : param_type) =
                 if n1 <> n2 then
                   raise (Semantic_error (loc, "Array dimension size mismatch"))
             | _ -> ())
-          tl_dims1 tl_dims2
+          check_dims_var check_dims_param
   | t1, t2 -> if t1 <> t2 then raise (Semantic_error (loc, "Type mismatch"))
 
 let comp_var_param_def (vd : var_def) (pd : param_def) =
