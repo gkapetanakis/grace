@@ -186,7 +186,7 @@ let wrap_stmt_assign _loc lv e sym_tbl =
   let sem () = Sem.sem_stmt stmt sym_tbl in
   enjoy sem stmt
 
-(* note: blocks don't cuase the opening of new scopes,
+(* note: blocks don't cause the opening of new scopes,
     as Grace does not allow the declaration of new variables
    inside them *)
 let wrap_stmt_block _loc b sym_tbl =
