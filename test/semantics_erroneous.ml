@@ -1,6 +1,18 @@
-let remove_extension filename =
-  let final_dot_index = String.rindex filename '.' in
-  String.sub filename 0 final_dot_index
+let remove_extension filename = Filename.remove_extension filename
+
+let symbolic_names (path : string) (filenames : string list)
+    (differentiator : string) (extension : string) =
+  let rec aux filenames acc =
+    match filenames with
+    | [] -> List.rev acc
+    | filename :: filenames ->
+        let destination =
+          remove_extension filename ^ differentiator ^ extension
+        in
+        Unix.symlink ~to_dir:false filename (path ^ destination);
+        aux filenames (destination :: acc)
+  in
+  aux filenames []
 
 let compile_to_obj filename =
   let inchan = open_in filename in
@@ -47,13 +59,17 @@ let () =
     else String.compare x y
   in
   let path = "semantics_erroneous/" in
-  let files =
+  let original_files =
     List.sort my_compare
       (List.filter
          (fun f -> Filename.check_suffix f ".grc")
          (Array.to_list (Sys.readdir path)))
   in
+  let files =
+    symbolic_names path original_files "__IGNORE_THIS_TEXT_42" ".grc"
+  in
   List.iter
     (fun f ->
       let filename = path ^ f in
-      compile_to_obj filename) files
+      compile_to_obj filename)
+    files

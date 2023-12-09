@@ -32,7 +32,8 @@ let sem_close_scope loc sym_tbl =
         | Some e -> get_loc_entry e
         | None ->
             raise
-              (Symbol_table_error (loc, "Could not find entry for id '" ^ id ^ "'"))
+              (Symbol_table_error
+                 (loc, "Could not find entry for id '" ^ id ^ "'"))
       in
       (* check if all declared functions have been defined *)
       let def_set, decl_set =
@@ -127,7 +128,8 @@ let type_of_ret loc sym_tbl =
   match entry.entry_type with
   | Function f -> !f.ret_type
   | _ ->
-      raise (Symbol_table_error (loc, "Tried to get return type of non-function"))
+      raise
+        (Symbol_table_error (loc, "Tried to get return type of non-function"))
 
 (* only lvalues can be passed by reference, all other expressions can't *)
 let check_ref expr pass_by =
@@ -244,7 +246,8 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
   match lookup_all func_call.id sym_tbl with
   | None ->
       raise
-        (Semantic_error (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'"))
+        (Semantic_error
+           (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'"))
   | Some { entry_type; _ } -> (
       match entry_type with
       | Function fdr ->
@@ -270,7 +273,10 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
                 exprs fd.params;
             func_call.callee_path <- fd.parent_path;
             Scalar func_call.ret_type
-      | _ -> raise (Semantic_error (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'")))
+      | _ ->
+          raise
+            (Semantic_error
+               (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'")))
 
 (* don't need to do checks again for LValue and FuncCall again *)
 and sem_expr (expr : expr) (sym_tbl : symbol_table) =
@@ -304,9 +310,8 @@ let sem_cond cond sym_tbl =
       | Scalar Char, Scalar Char -> ()
       | _, _ ->
           raise
-            (Semantic_error
-               ( get_loc_cond cond,
-                 "Cannot compare char with int" )))
+            (Semantic_error (get_loc_cond cond, "Cannot compare char with int"))
+      )
   | _ -> ()
 
 let sem_stmt stmt sym_tbl =
@@ -360,7 +365,12 @@ let sem_func_def (func : Ast.func) (sym_tbl : symbol_table) =
               (Semantic_error
                  (func.loc, "Function already defined in current scope"))
           else compare_heads fd func
-      | _ -> raise (Semantic_error (func.loc, "Name already declared and is not a function: '" ^ func.id ^ "'")))
+      | _ ->
+          raise
+            (Semantic_error
+               ( func.loc,
+                 "Name already declared and is not a function: '" ^ func.id
+                 ^ "'" )))
 
 let ins_func_def (func : Ast.func) (sym_tbl : symbol_table) =
   insert func.loc func.id (Function (ref func)) sym_tbl

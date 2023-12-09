@@ -4,7 +4,7 @@
   (source_tree ./semantics)
   (source_tree ./semantics_erroneous)
   (file ../runtime_lib/libgrace.a))
- (libraries grace_lib))
+ (libraries grace_lib unix))
 
 (env
  (dev
