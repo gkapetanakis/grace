@@ -1,0 +1,4 @@
+fun var_def_type_mismatch() : nothing
+   fun foo(ref a : int) : nothing;
+   fun foo(ref a : char) : nothing {}
+{}
