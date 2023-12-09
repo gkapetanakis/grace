@@ -1,0 +1,6 @@
+fun var_param_array_dimension_size_mismatch() : nothing
+    var a : int[10];
+    fun foo(ref a : int[5]) : nothing {}
+{
+    foo(a);
+}

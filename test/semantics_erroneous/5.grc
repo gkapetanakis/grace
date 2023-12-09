@@ -1,0 +1,5 @@
+fun var_param_type_mismatch() : nothing
+    fun aux(a : int) : nothing {}
+{
+    aux('a');
+}

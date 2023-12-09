@@ -1,0 +1,6 @@
+fun var_param_array_type_mismatch() : nothing
+    var x : int[5];
+    fun aux(ref y : char[5]) : nothing {}
+{
+    aux(x);
+}
