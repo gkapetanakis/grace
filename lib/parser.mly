@@ -1,5 +1,6 @@
 %{
   open Wrapper
+  let tbl = ref (create_sym_tbl ())
 %}
 
 %start <Ast.program> program
@@ -84,47 +85,47 @@ let pass_by :=
 
 let var_def :=
   | VAR; ids = separated_nonempty_list(COMMA, ID); COLON; vt = var_type; SEMICOLON;
-    { List.map (fun id -> wrap_var_def $loc id vt tbl) ids }
+    { List.map (fun id -> wrap_var_def $loc id vt !tbl) ids }
 
 let param_def :=
   | pb = pass_by; ids = separated_nonempty_list(COMMA, ID); COLON; pt = param_type;
-    { List.map (fun id -> wrap_param_def $loc id pt pb tbl) ids }
+    { List.map (fun id -> wrap_param_def $loc id pt pb !tbl) ids }
 
 let l_value :=
   | id = ID; exprs = list(delimited(LEFT_BRACKET, expr, RIGHT_BRACKET));
-    { wrap_l_value_id $loc id exprs tbl }
+    { wrap_l_value_id $loc id exprs !tbl }
   | str = LIT_STR; exprs = list(delimited(LEFT_BRACKET, expr, RIGHT_BRACKET));
-    { wrap_l_value_string $loc str exprs tbl }
+    { wrap_l_value_string $loc str exprs !tbl }
 
 let func_call :=
   | id = ID; LEFT_PAR; exprs = separated_list(COMMA, expr); RIGHT_PAR;
-    { wrap_func_call $loc id exprs tbl }
+    { wrap_func_call $loc id exprs !tbl }
 
 let expr :=
   | li = LIT_INT;
-    { wrap_expr_lit_int $loc li tbl }
+    { wrap_expr_lit_int $loc li !tbl }
   | lc = LIT_CHAR;
-    { wrap_expr_lit_char $loc lc tbl }
+    { wrap_expr_lit_char $loc lc !tbl }
   | lv = l_value;
-    { wrap_expr_l_value $loc lv tbl }
+    { wrap_expr_l_value $loc lv !tbl }
   | LEFT_PAR; ~ = expr; RIGHT_PAR;
     { expr }
   | fc = func_call;
-    { wrap_expr_func_call $loc fc tbl }
+    { wrap_expr_func_call $loc fc !tbl }
   | op = un_arit_op; e = expr; %prec USIGN
-    { wrap_expr_un_arit_op $loc op e tbl }  (* Semantic: e should be int *)
+    { wrap_expr_un_arit_op $loc op e !tbl }  (* Semantic: e should be int *)
   | e1 = expr;  op = bin_arit_op; e2 = expr;
-    { wrap_expr_bin_arit_op $loc op e1 e2 tbl } (* Semantic: e1, e2 should be both int *)
+    { wrap_expr_bin_arit_op $loc op e1 e2 !tbl } (* Semantic: e1, e2 should be both int *)
 
 let cond :=
   | LEFT_PAR; c = cond; RIGHT_PAR;
     { c }
   | op = un_logic_op; c = cond; %prec UNOT
-    { wrap_cond_un_logic_op $loc op c tbl }
+    { wrap_cond_un_logic_op $loc op c !tbl }
   | c1 = cond; op = bin_logic_op; c2 = cond;
-    { wrap_cond_bin_logic_op $loc op c1 c2 tbl } (* AND/OR should be short-circuited, added after semantic analysis? *)
+    { wrap_cond_bin_logic_op $loc op c1 c2 !tbl } (* AND/OR should be short-circuited, added after semantic analysis? *)
   | e1 = expr; op = comp_op ; e2 = expr; (* %prec UCOMP *)
-    { wrap_cond_comp_op $loc op e1 e2 tbl } (* Semantic: e{1,2} should be both int or both char *)
+    { wrap_cond_comp_op $loc op e1 e2 !tbl } (* Semantic: e{1,2} should be both int or both char *)
 
 let block :=
   | LEFT_CURL; stmts = list(stmt); RIGHT_CURL;
@@ -132,29 +133,29 @@ let block :=
 
 let stmt :=
   | SEMICOLON;
-    { wrap_stmt_empty $loc tbl }
+    { wrap_stmt_empty $loc !tbl }
   | lv = l_value; ASSIGN; e = expr; SEMICOLON;
-    { wrap_stmt_assign $loc lv e tbl }
+    { wrap_stmt_assign $loc lv e !tbl }
   | b = block;
-    { wrap_stmt_block $loc b tbl }
+    { wrap_stmt_block $loc b !tbl }
   | fc = func_call; SEMICOLON;
-    { wrap_stmt_func_call $loc fc tbl }
+    { wrap_stmt_func_call $loc fc !tbl }
   | IF; c = cond; THEN; s = stmt;
-    { wrap_stmt_if $loc c (Some s) None tbl }
+    { wrap_stmt_if $loc c (Some s) None !tbl }
   | IF; c = cond; THEN; s1 = stmt; ELSE; s2 = stmt;
-    { wrap_stmt_if $loc c (Some s1) (Some s2) tbl }
+    { wrap_stmt_if $loc c (Some s1) (Some s2) !tbl }
   | WHILE; c = cond; DO; s = stmt;
-    { wrap_stmt_while $loc c s tbl }
+    { wrap_stmt_while $loc c s !tbl }
   | RETURN; e_o = option(expr); SEMICOLON;
-    { wrap_stmt_return $loc e_o tbl }
+    { wrap_stmt_return $loc e_o !tbl }
 
 let decl_header :=
   | FUN; id = ID; LEFT_PAR; fd_l = flatten(separated_list(SEMICOLON, param_def)); RIGHT_PAR; COLON; rt = ret_type;
-    { wrap_decl_header $loc(id) id fd_l rt tbl }
+    { wrap_decl_header $loc(id) id fd_l rt !tbl }
 
 let def_header :=
   | FUN; id = ID; LEFT_PAR; fd_l = flatten(separated_list(SEMICOLON, param_def)); RIGHT_PAR; COLON; rt = ret_type;
-    { wrap_def_header $loc(id) id fd_l rt tbl }
+    { wrap_def_header $loc(id) id fd_l rt !tbl }
 
 let func_decl :=
   | h = decl_header; SEMICOLON;
@@ -162,7 +163,7 @@ let func_decl :=
 
 let func_def :=
   | h = def_header; ld_l = flatten(list(local_def)); b = block;
-    { wrap_close_scope $loc tbl ;wrap_func_def h ld_l b }
+    { wrap_close_scope $loc !tbl ;wrap_func_def h ld_l b }
 
 let local_def :=
   | fd = func_def;
@@ -173,8 +174,8 @@ let local_def :=
     { wrap_local_def_var vd_l }
 
 let program :=
-  | midrule({ wrap_open_scope Symbol.global_scope_name tbl }); declare_runtime; fd = func_def; EOF;
-    { Symbol.remove_runtime tbl; wrap_close_scope $loc tbl; wrap_program fd tbl }
+  | midrule({ tbl := create_sym_tbl () }); midrule({ wrap_open_scope Symbol.global_scope_name !tbl }); declare_runtime; fd = func_def; EOF;
+    { Symbol.remove_runtime !tbl; wrap_close_scope $loc !tbl; wrap_program fd !tbl }
 
 let declare_runtime :=
-  | { Symbol.declare_runtime $loc tbl }
+  | { Symbol.declare_runtime $loc !tbl }

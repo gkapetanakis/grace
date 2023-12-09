@@ -1,7 +1,11 @@
 open Ast
 
-let tbl : Symbol.symbol_table =
-  { scopes = []; table = Hashtbl.create 100; parent_path = [] }
+let create_sym_tbl () =
+  Symbol.{
+    scopes = [];
+    table = Hashtbl.create 100;
+    parent_path = [];
+  }
 
 let enjoy sem node =
   ignore (sem ());

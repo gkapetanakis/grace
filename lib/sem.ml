@@ -32,7 +32,7 @@ let sem_close_scope loc sym_tbl =
         | Some e -> get_loc_entry e
         | None ->
             raise
-              (Symbol_table_error (loc, "Could not find entry for id " ^ id))
+              (Symbol_table_error (loc, "Could not find entry for id '" ^ id ^ "'"))
       in
       (* check if all declared functions have been defined *)
       let def_set, decl_set =
@@ -44,7 +44,7 @@ let sem_close_scope loc sym_tbl =
             raise
               (Semantic_error
                  ( get_loc_by_id id sym_tbl,
-                   "Function " ^ id ^ " declared, but not defined" )))
+                   "Function '" ^ id ^ "' declared, but not defined" )))
         decl_set
 
 let verify_var_def (vd : var_def) =
@@ -244,7 +244,7 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
   match lookup_all func_call.id sym_tbl with
   | None ->
       raise
-        (Semantic_error (func_call.loc, "Function not defined " ^ func_call.id))
+        (Semantic_error (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'"))
   | Some { entry_type; _ } -> (
       match entry_type with
       | Function fdr ->
@@ -270,7 +270,7 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
                 exprs fd.params;
             func_call.callee_path <- fd.parent_path;
             Scalar func_call.ret_type
-      | _ -> raise (Semantic_error (func_call.loc, "Function not defined")))
+      | _ -> raise (Semantic_error (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'")))
 
 (* don't need to do checks again for LValue and FuncCall again *)
 and sem_expr (expr : expr) (sym_tbl : symbol_table) =
@@ -360,7 +360,7 @@ let sem_func_def (func : Ast.func) (sym_tbl : symbol_table) =
               (Semantic_error
                  (func.loc, "Function already defined in current scope"))
           else compare_heads fd func
-      | _ -> raise (Semantic_error (func.loc, "Name is not a function")))
+      | _ -> raise (Semantic_error (func.loc, "Name already declared and is not a function: '" ^ func.id ^ "'")))
 
 let ins_func_def (func : Ast.func) (sym_tbl : symbol_table) =
   insert func.loc func.id (Function (ref func)) sym_tbl
@@ -380,18 +380,18 @@ let sem_program (func : Ast.func) (sym_tbl : symbol_table) =
             if fd.status = Ast.Declared then
               raise
                 (Symbol_table_error
-                   (fd.loc, "Lingering function declaration " ^ fd.id))
+                   (fd.loc, "Lingering function declaration: '" ^ fd.id ^ "'"))
             else
               raise
                 (Symbol_table_error
-                   (fd.loc, "Lingering function definition " ^ fd.id))
+                   (fd.loc, "Lingering function definition: '" ^ fd.id ^ "'"))
         | Variable v ->
             raise
               (Symbol_table_error
-                 (!v.loc, "Lingering variable definition " ^ !v.id))
+                 (!v.loc, "Lingering variable definition: '" ^ !v.id ^ "'"))
         | Parameter p ->
             raise
               (Symbol_table_error
-                 (!p.loc, "Lingering parameter definition " ^ !p.id)))
+                 (!p.loc, "Lingering parameter definition: '" ^ !p.id ^ "'")))
       sym_tbl.table;
   func

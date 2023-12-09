@@ -1,0 +1,9 @@
+$
+
+fun err_func_def(): nothing
+    var a: int;
+    fun a(): nothing
+    {
+    }
+{
+}

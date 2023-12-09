@@ -1,7 +1,7 @@
 (tests
- (names semantics)
+ (names semantics semantics_erroneous)
  (deps
-  (source_tree ./semantics)
+  (source_tree ./semantics_erroneous)
   (file ../runtime_lib/libgrace.a))
  (libraries grace_lib))
 
