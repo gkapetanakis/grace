@@ -1,4 +1,5 @@
 fun var_def_ref_missmatch() : nothing
     fun aux(a : int): nothing;
     fun aux(ref a : int) : nothing {}
-{}
+{
+}

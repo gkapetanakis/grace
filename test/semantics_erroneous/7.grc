@@ -1,7 +1,6 @@
 fun var_param_array_dim_mismatch () : nothing
     var arr : int[1][1];
     fun foo (ref a : int[1]) : nothing {}
-
 {
     foo(arr);
 }

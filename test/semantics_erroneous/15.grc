@@ -1,3 +1,4 @@
 fun param_already_defined() : nothing
   fun foo(a : int; b : char; a : int) : nothing {}
-{}
+{
+}

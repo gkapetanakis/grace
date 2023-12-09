@@ -1,3 +1,4 @@
 fun var_def_dim_sign() : nothing
     var arr : int[1][0];
-{}
+{
+}

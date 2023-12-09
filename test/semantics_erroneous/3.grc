@@ -1,3 +1,4 @@
 fun param_def_dim_spec() : nothing
     fun aux(ref arr : int[1][]) : nothing {}
-{}
+{
+}

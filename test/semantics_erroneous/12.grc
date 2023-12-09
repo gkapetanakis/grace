@@ -1,4 +1,5 @@
 fun func_decl_def_ret_type_mismatch() : nothing
    fun foo() : int;
    fun foo() : char { return 'a'; }
-{}
+{
+}
