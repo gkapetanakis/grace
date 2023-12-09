@@ -1,0 +1,6 @@
+fun function_does_not_return() : nothing
+  fun foo() : int {}
+{
+    foo();
+    return;
+}
