@@ -1,11 +1,13 @@
-$ check that strings are terminated by a single \0 character by our compiler
+$ check that strings are terminated at the first instance of '\0'
+$ compiler adds implicitly a '\0' at the end of all string literals
 
 fun check_string_termination(): nothing
+
     fun aux(ref s1, s2: char[]): nothing
     {
         if strlen(s1) # strlen(s2) then
             writeString("Error: multiple termination characters\n");
     }
 {
-    aux("a", "a\0\0\0\0\0");
+    aux("a", "a\0\0\0\0");
 }
