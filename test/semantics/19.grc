@@ -1,12 +1,13 @@
-$ variable spilling (not an actual feature, just a side effect of the implementation)
+$ check that strings are terminated at the first instance of '\0'
+$ compiler adds implicitly a '\0' at the end of all string literals
 
-fun check_array_spill(): nothing
-    var a : int[1];
-    var b : int;
+fun check_string_termination(): nothing
+
+    fun aux(ref s1, s2: char[]): nothing
+    {
+        if strlen(s1) # strlen(s2) then
+            writeString("Error: multiple termination characters\n");
+    }
 {
-    b <- 0;
-    a[1] <- 1; $ this should spill to variable b, since a, b are defined contiguously in a structure
-    
-    if b # 1 then
-        writeString("Error: structs should allow spilling from array to variables defined contiguously in them (just like C does)\n");
+    aux("a", "a\0\0\0\0");
 }

@@ -1,59 +1,27 @@
-$ check all return expressions
+$ return in if and else
 
-fun check_return_expressions(): nothing
-    fun f1(): nothing
+fun check_if_else_control_flow(): nothing
+    fun f(): int
     {
-        return;
-    }
-
-    fun f2(): int
-    {
-        return 1;
-    }
-
-    fun f3(): char
-    {
-        return 'a';
-    }
-
-    fun f4(): int
-        var i: int;
-    {
-        i <- 0;
-        return i;
-    }
-
-    fun f5(): char
-    {
-        return f3();
-    }
-
-    fun f6(): int
-    {
-        return 2 + 3;
-    }
-
-    fun f7(): char
-    {
-        return "hello"[0];
+        $ since this function always returns a value, regardless of the
+        $ conditions checked, this program should compile without errors
+        if 0 = 1 then {
+            return 1;
+        }
+        else {
+            if 1 = 2 then {
+                return 2;
+            }
+            else {
+                if 2 = 3 then {
+                    return 3;
+                }
+                else {
+                    return 4;
+                }
+            }
+        }
     }
 {
-    f1();
-    if f2() # 1 then
-        writeString("Error: return expressions not working as expected (1)\n");
-
-    if f3() # 'a' then
-        writeString("Error: return expressions not working as expected (2)\n");
-
-    if f4() # 0 then
-        writeString("Error: return expressions not working as expected (3)\n");
-
-    if f5() # 'a' then
-        writeString("Error: return expressions not working as expected (4)\n");
-
-    if f6() # 5 then
-        writeString("Error: return expressions not working as expected (5)\n");
-
-    if f7() # 'h' then
-        writeString("Error: return expressions not working as expected (6)\n");
+    f();
 }

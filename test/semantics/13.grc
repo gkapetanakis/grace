@@ -1,4 +1,4 @@
-$ assignment inside function
+$ assignment inside function using local variables
 
 fun check_assignment_in_function(): nothing
     var a, b, c: int;
@@ -68,4 +68,5 @@ fun check_assignment_in_function(): nothing
     b <- 2;
     c <- 3;
     f(a, b, c, arr, marr);
+    f2(""[0], ""[0], "hello");
 }

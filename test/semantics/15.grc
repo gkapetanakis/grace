@@ -1,25 +1,18 @@
-$ access to parent's local variables
+$ local variables in recursion
 
-fun check_parent_local_variable_access(): nothing
-    var i: int;
-    fun side_effects(): nothing
-        var g: int;
-        fun side_side_effects(): nothing
-        {
-            i <- i + 1;
-            g <- g + 1;
-        }
+fun check_recursion_local_variable() : nothing
+    fun rec(d: int) : nothing
+        var i : int;
     {
-        i <- i + 1;
-        g <- 0;
-        side_side_effects();
-        
-        if g # 1 then
-            writeString("Error: access to parent function's local variables not working as expected (1)\n");
+        if d > 1 then return;
+
+        i <- d;
+
+        rec(d + 1);
+
+        if d = 0 and i # 0 then
+            writeString("Error: local variable does not have the expected value\n");
     }
 {
-    i <- 0;
-    side_effects();
-    if i # 2 then
-        writeString("Error: access to parent function's local variables not working as expected (2)\n");
+    rec(0);
 }
