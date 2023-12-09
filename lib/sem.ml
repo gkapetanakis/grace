@@ -127,7 +127,7 @@ let type_of_ret loc sym_tbl =
   match entry.entry_type with
   | Function f -> !f.ret_type
   | _ ->
-      raise (Semantic_error (loc, "Tried to get return type of non-function"))
+      raise (Symbol_table_error (loc, "Tried to get return type of non-function"))
 
 (* only lvalues can be passed by reference, all other expressions can't *)
 let check_ref expr pass_by =
