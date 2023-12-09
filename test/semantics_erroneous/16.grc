@@ -1,0 +1,4 @@
+fun array_pass_by_reference () : nothing
+  fun foo(x : int[]) : nothing
+  {}
+{}

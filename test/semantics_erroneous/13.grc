@@ -1,0 +1,4 @@
+fun func_decl_def_param_count_mismatch() : nothing
+   fun foo(a,b,c : int) : nothing;
+   fun foo(a,b : int) : nothing {}
+{}

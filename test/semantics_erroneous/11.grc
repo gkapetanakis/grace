@@ -1,0 +1,5 @@
+fun check_pass_by_reference() : nothing
+   fun foo(ref a : int) : nothing {}
+{
+    foo(1);
+}

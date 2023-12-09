@@ -1,0 +1,5 @@
+fun variable_already_defined_in_any_scope() : nothing
+    var a : int;
+    var a : char;
+{
+}
