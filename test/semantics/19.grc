@@ -8,5 +8,5 @@ fun check_array_spill(): nothing
     a[1] <- 1; $ this should spill to variable b, since a, b are defined contiguously in a structure
     
     if b # 1 then
-        writeString("Error: structs should allow spilling from array to variables defined contiguously in structs (just like C does)\n");
+        writeString("Error: structs should allow spilling from array to variables defined contiguously in them (just like C does)\n");
 }
