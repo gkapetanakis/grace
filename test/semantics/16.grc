@@ -1,0 +1,27 @@
+$ return in if and else
+
+fun check_if_else_control_flow(): nothing
+    fun f(): int
+    {
+        $ since this function always returns a value, regardless of the
+        $ conditions checked, this program should compile without errors
+        if 0 = 1 then {
+            return 1;
+        }
+        else {
+            if 1 = 2 then {
+                return 2;
+            }
+            else {
+                if 2 = 3 then {
+                    return 3;
+                }
+                else {
+                    return 4;
+                }
+            }
+        }
+    }
+{
+    f();
+}

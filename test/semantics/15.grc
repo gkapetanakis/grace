@@ -1,0 +1,25 @@
+$ access to parent's local variables
+
+fun check_parent_local_variable_access(): nothing
+    var i: int;
+    fun side_effects(): nothing
+        var g: int;
+        fun side_side_effects(): nothing
+        {
+            i <- i + 1;
+            g <- g + 1;
+        }
+    {
+        i <- i + 1;
+        g <- 0;
+        side_side_effects();
+        
+        if g # 1 then
+            writeString("Error: access to parent function's local variables not working as expected (1)\n");
+    }
+{
+    i <- 0;
+    side_effects();
+    if i # 2 then
+        writeString("Error: access to parent function's local variables not working as expected (2)\n");
+}

@@ -3,6 +3,6 @@ $ writeInteger, writeChar, writeString, int/char/string literals
 fun check_printing(): nothing
 {
     writeInteger(0);
-    writeChar('\n');
+    writeChar("\n"[0]);
     writeString("Hello World\n");
 }
