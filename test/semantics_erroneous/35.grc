@@ -1,0 +1,7 @@
+$ assing to array
+
+fun err_assignment(): nothing
+    var a: int[1];
+{
+    a <- 5;
+}

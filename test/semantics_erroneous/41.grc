@@ -1,0 +1,6 @@
+$ main function returning char
+
+fun err_return(): nothing
+{
+    return 'a';
+}

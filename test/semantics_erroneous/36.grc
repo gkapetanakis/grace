@@ -1,0 +1,10 @@
+$ function returning an array
+
+fun err_return(): nothing
+    fun f(): int
+        var a: int[1];
+    {
+        return a;
+    }
+{
+}

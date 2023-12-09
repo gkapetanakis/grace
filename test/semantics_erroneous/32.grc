@@ -1,0 +1,6 @@
+$ assigning to string literal
+
+fun err_assignment(): nothing
+{
+    "hello" <- "hi";
+}

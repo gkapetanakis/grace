@@ -1,0 +1,6 @@
+$ assigning to string literal index
+
+fun err_assignment(): nothing
+{
+    "hello"[0] <- 'H';
+}

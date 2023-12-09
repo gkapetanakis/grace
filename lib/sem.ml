@@ -306,7 +306,7 @@ let sem_cond cond sym_tbl =
           raise
             (Semantic_error
                ( get_loc_cond cond,
-                 "Comparison operator must be applied to integer" )))
+                 "Cannot compare char with int" )))
   | _ -> ()
 
 let sem_stmt stmt sym_tbl =

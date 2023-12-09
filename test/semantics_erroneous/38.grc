@@ -1,0 +1,9 @@
+$ function returning char instead of nothing
+
+fun err_return(): nothing
+    fun f(): nothing
+    {
+        return 'a';
+    }
+{
+}

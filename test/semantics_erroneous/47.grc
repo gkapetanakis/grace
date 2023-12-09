@@ -1,0 +1,7 @@
+$ calling a variable as a function
+
+fun err_call(): nothing
+    var a: int;
+{
+    a();
+}

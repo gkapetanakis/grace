@@ -1,0 +1,7 @@
+$ same function declared twice in same scope
+
+fun err_dupe_decl(): nothing
+    fun f(): nothing;
+    fun f(): nothing;
+{
+}

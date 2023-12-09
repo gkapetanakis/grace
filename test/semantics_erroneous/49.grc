@@ -1,0 +1,5 @@
+$ main function cannot return char
+
+fun err_main(): char
+{
+}

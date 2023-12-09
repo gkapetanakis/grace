@@ -1,0 +1,7 @@
+$ assigning char to int
+
+fun err_assignment(): nothing
+    var a: int;
+{
+    a <- 'a';
+}

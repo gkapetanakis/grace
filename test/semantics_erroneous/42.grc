@@ -1,0 +1,6 @@
+$ main function returning int
+
+fun err_return(): nothing
+{
+    return 1;
+}

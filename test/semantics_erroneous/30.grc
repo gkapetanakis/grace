@@ -1,0 +1,6 @@
+$ comparing char with int
+
+fun err_comp(): nothing
+{
+    if 1 = 'a' then ;
+}

@@ -1,0 +1,6 @@
+$ calling a nonexistend name as a function
+
+fun err_call(): nothing
+{
+    a();
+}

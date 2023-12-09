@@ -1,0 +1,7 @@
+$ assigning int to char
+
+fun err_assignment(): nothing
+    var a: char;
+{
+    a <- 5;
+}

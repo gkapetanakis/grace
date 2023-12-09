@@ -1,0 +1,9 @@
+$ function returning char instead of int
+
+fun err_return(): nothing
+    fun f(): char
+    {
+        return 1;
+    }
+{
+}

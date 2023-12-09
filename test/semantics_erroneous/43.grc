@@ -1,0 +1,7 @@
+$ same function declared after defined in same scope
+
+fun err_decl_after_def(): nothing
+    fun f(): nothing {}
+    fun f(): nothing;
+{
+}

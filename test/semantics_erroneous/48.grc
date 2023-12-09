@@ -1,0 +1,5 @@
+$ main function cannot take parameters
+
+fun err_main(i: int): nothing
+{
+}
