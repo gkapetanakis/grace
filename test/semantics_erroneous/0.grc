@@ -1,0 +1,6 @@
+$ lingering function declaration
+
+fun ling_func() : nothing
+    fun func1() : nothing; $ this function is declared but not defined
+    fun func2() : nothing {}
+{}
