@@ -13,29 +13,39 @@ type pass_by = Value | Reference
 type func_status = Defined | Declared
 
 type var_def = {
+  (* explicit information for variable definitions *)
   id : string;
   var_type : var_type;
+  loc : loc;
+  (* implicit information for variable definitions
+   * fields used for semantic error checking and code generation *)
   frame_offset : int;
   parent_path : string list;
-  loc : loc;
 }
 
 type param_def = {
+  (* explicit information for parameter definitions *)
   id : string;
   param_type : param_type;
   pass_by : pass_by;
+  loc : loc;
+  (* implicit information for parameter definitions
+   * fields used for semantic error checking and code generation *)
   mutable frame_offset : int;
   mutable parent_path : string list;
-  loc : loc;
 }
 
 type l_value_id = {
+  (* explicit information for l-value (type: identifier) *)
   id : string;
+  loc : loc;
+  (* implicit information used in code generation.
+   * These fields are set during the semantic analysis and
+   * they match the same information of the identifier they refer to *)
   mutable data_type : data_type;
   mutable passed_by : pass_by;
   mutable frame_offset : int;
   mutable parent_path : string list;
-  loc : loc;
 }
 
 type l_value_lstring = { id : string; data_type : data_type; loc : loc }
@@ -49,12 +59,15 @@ and simple_l_value = Id of l_value_id | LString of l_value_lstring
 and l_value = Simple of simple_l_value | ArrayAccess of l_value_array_access
 
 and func_call = {
+  (* explicit information for function call immediately obvious from parsed data *)
   id : string;
+  loc : loc;
+  (* implicit information set by semantic analysis. These fields are
+   * usefull for code generation. *)
   mutable args : (expr * pass_by) list;
   mutable ret_type : ret_type;
   mutable callee_path : string list;
   caller_path : string list;
-  loc : loc;
 }
 
 and expr =
@@ -88,8 +101,10 @@ type func = {
   mutable local_defs : local_def list;
   mutable body : block option;
   loc : loc;
-  parent_path : string list;
   status : func_status;
+  (* implicit information used in code generation. This field is used in
+   * code generation *)
+  parent_path : string list;
 }
 
 and local_def = VarDef of var_def | FuncDecl of func | FuncDef of func
@@ -130,8 +145,6 @@ let get_loc_local_def = function
   | VarDef var_def -> var_def.loc
   | FuncDecl func -> func.loc
   | FuncDef func -> func.loc
-
-let get_loc_program = function MainFunc func -> func.loc
 
 let l_string_dependence l_v =
   let aux = function Id _ -> false | LString _ -> true in
