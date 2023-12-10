@@ -133,17 +133,6 @@ let get_loc_local_def = function
 
 let get_loc_program = function MainFunc func -> func.loc
 
-let create_var_type dt dims =
-  match dims with
-  | [] -> Scalar dt
-  | _ -> Array (dt, List.map (fun x -> Some x) dims)
-
-let create_param_type dt dims flexible =
-  match (dims, flexible) with
-  | [], false -> Scalar dt
-  | (_ :: _ as dims), false -> Array (dt, List.map (fun x -> Some x) dims)
-  | dims, true -> Array (dt, None :: List.map (fun x -> Some x) dims)
-
 let l_string_dependence l_v =
   let aux = function Id _ -> false | LString _ -> true in
   match l_v with

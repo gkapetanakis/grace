@@ -67,14 +67,18 @@ let comp_op ==
   | LESSER_EQ; { Ast.Leq }
 
 let var_type :=
-  | dt = compl_data_type; dims = list(delimited(LEFT_BRACKET, LIT_INT, RIGHT_BRACKET));
-    { Ast.create_var_type dt dims }
+  | dt = compl_data_type;
+    { Ast.Scalar dt }
+  | dt = compl_data_type; dims = nonempty_list(delimited(LEFT_BRACKET, LIT_INT, RIGHT_BRACKET));
+    { Ast.Array (dt, List.map (fun dim -> Some dim) dims) }
 
 let param_type :=
-  | dt = compl_data_type; dims = list(delimited(LEFT_BRACKET, LIT_INT, RIGHT_BRACKET));
-    { Ast.create_param_type dt dims false }
+  | dt = compl_data_type;
+    { Ast.Scalar dt }
+  | dt = compl_data_type; dims = nonempty_list(delimited(LEFT_BRACKET, LIT_INT, RIGHT_BRACKET));
+    { Ast.Array (dt, List.map (fun dim -> Some dim) dims) }
   | dt = compl_data_type; LEFT_BRACKET; RIGHT_BRACKET; dims = list(delimited(LEFT_BRACKET, LIT_INT, RIGHT_BRACKET));
-    { Ast.create_param_type dt dims true }
+    { Ast.Array (dt, None :: List.map (fun dim -> Some dim) dims) }
 
 let ret_type :=
   | dt = incompl_data_type; { dt }
