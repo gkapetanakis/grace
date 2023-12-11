@@ -17,7 +17,7 @@ and scope = { mutable next_offset : int; mutable entries : entry list }
 type symbol_table = {
   mutable scopes : scope list;
   table : (string, entry) Hashtbl.t;
-  mutable parent_path : string list; (*mutable depth : int; *)
+  mutable parent_path : string list;
 }
 
 let get_loc_entry_type (entry_type : entry_type) =

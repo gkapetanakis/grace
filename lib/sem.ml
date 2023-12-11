@@ -3,22 +3,22 @@ open Symbol
 open Error
 
 (* used to compare function declarations with definitions
-   and find undefined declarations *)
+ * and find undefined declarations *)
 module StringSet = Set.Make (String)
 
 (* before closing a scope check for lingering declarations *)
-let sem_close_scope loc sym_tbl =
-  match sym_tbl.scopes with
+let sem_close_scope loc tbl =
+  match tbl.scopes with
   | [] -> raise (Symbol_table_error (loc, "Tried to close empty symbol table"))
   | scope :: _ ->
-      (* find declarations and definitions in current scope *)
+      (* find function declarations and definitions in current scope *)
       let rec aux entries def_set decl_set =
         match entries with
         | [] -> (def_set, decl_set)
         | entry :: tl -> (
             match entry.entry_type with
-            | Function fdr ->
-                let fd = !fdr in
+            | Function fd_ref ->
+                let fd = !fd_ref in
                 if fd.status = Declared then
                   let decl_set = StringSet.add fd.id decl_set in
                   aux tl def_set decl_set
@@ -27,8 +27,8 @@ let sem_close_scope loc sym_tbl =
                   aux tl def_set decl_set
             | _ -> aux tl def_set decl_set)
       in
-      let get_loc_by_id id sym_tbl =
-        let entry = lookup id sym_tbl in
+      let get_loc_of_id id tbl =
+        let entry = lookup id tbl in
         match entry with
         | Some e -> get_loc_entry e
         | None ->
@@ -45,10 +45,11 @@ let sem_close_scope loc sym_tbl =
           if not (StringSet.mem id def_set) then
             raise
               (Semantic_error
-                 ( get_loc_by_id id sym_tbl,
+                 ( get_loc_of_id id tbl,
                    "Function '" ^ id ^ "' declared, but not defined" )))
         decl_set
 
+(* checks that variables defined as arrays have correct array size specifiers *)
 let verify_var_def (vd : var_def) =
   match vd.var_type with
   | Array (_, dims) ->
@@ -67,6 +68,7 @@ let verify_var_def (vd : var_def) =
       else ()
   | _ -> ()
 
+(* same as above, but for parameters, therefore the first dimension can be unspecified *)
 let verify_param_def (pd : param_def) =
   match pd.param_type with
   | Array (_, dims) ->
@@ -87,6 +89,8 @@ let verify_param_def (pd : param_def) =
       else ()
   | _ -> ()
 
+(* if a variable with the given variable type cannot be used as an argument
+  for a parameter of the given parameter type, this function throws an error *)
 let comp_var_param_types loc (vt : var_type) (pt : param_type) =
   match (vt, pt) with
   | Array (t1, dims_var), Array (t2, dims_param) ->
@@ -114,6 +118,7 @@ let comp_var_param_types loc (vt : var_type) (pt : param_type) =
 let comp_var_param_def (vd : var_def) (pd : param_def) =
   comp_var_param_types vd.loc vd.var_type pd.param_type
 
+(* verifies that a function definition matches with a function declaration *)
 let comp_param_decl_def (pd1 : param_def) (pd2 : param_def) =
   if pd1.pass_by <> pd2.pass_by then
     raise
@@ -123,8 +128,8 @@ let comp_param_decl_def (pd1 : param_def) (pd2 : param_def) =
     raise
       (Semantic_error (pd1.loc, "Parameter definition/declaration type mismatch"))
 
-let type_of_ret loc sym_tbl =
-  let sc = List.hd (List.tl sym_tbl.scopes) in
+let type_of_ret loc tbl =
+  let sc = List.hd (List.tl tbl.scopes) in
   let entry = List.hd sc.entries in
   match entry.entry_type with
   | Function f -> !f.ret_type
@@ -153,52 +158,60 @@ let compare_heads (decl : func) (def : func) =
          (def.loc, "Function definition/declaration parameter count mismatch"))
   else List.iter2 comp_param_decl_def decl.params def.params
 
-let sem_var_def (vd : var_def) (sym_tbl : symbol_table) =
+(* verifies that a variable is not defined twice in the same scope *)
+let sem_var_def (vd : var_def) (tbl : symbol_table) =
   verify_var_def vd;
-  match lookup vd.id sym_tbl with
+  match lookup vd.id tbl with
   | Some _ ->
       raise
         (Semantic_error (vd.loc, "Variable already defined in current scope"))
   | None -> ()
 
-let ins_var_def (vd : var_def) (sym_tbl : symbol_table) =
-  insert vd.loc vd.id (Variable (ref vd)) sym_tbl
+(* inserts a variable in the current scope *)
+let ins_var_def (vd : var_def) (tbl : symbol_table) =
+  insert vd.loc vd.id (Variable (ref vd)) tbl
 
-let sem_param_def (pd : param_def) (sym_tbl : symbol_table) =
+(* verifies that a parameter is not defined twice in the same scope
+   and also that array parameters are always passed by reference *)
+let sem_param_def (pd : param_def) (tbl : symbol_table) =
   verify_param_def pd;
   match (pd.param_type, pd.pass_by) with
   | Array _, Value ->
       raise
         (Semantic_error (pd.loc, "Array parameter must be passed by reference"))
   | _ -> (
-      match lookup pd.id sym_tbl with
+      match lookup pd.id tbl with
       | Some _ ->
           raise
             (Semantic_error
                (pd.loc, "Parameter already defined in current scope"))
       | None -> ())
 
-let ins_param_def (pd : param_def) (sym_tbl : symbol_table) =
-  insert pd.loc pd.id (Parameter (ref pd)) sym_tbl
+(* inserts a parameter in the current scope *)
+let ins_param_def (pd : param_def) (tbl : symbol_table) =
+  insert pd.loc pd.id (Parameter (ref pd)) tbl
 
-let sem_simple_l_value (slv : simple_l_value) (sym_tbl : symbol_table) =
+(* fill in the missing fields of the given l value, or throw an error if it doesn't exist *)
+let sem_simple_l_value (slv : simple_l_value) (tbl : symbol_table) =
   match slv with
   | Id l_val_id -> (
-      match lookup_all l_val_id.id sym_tbl with
+      match lookup_all l_val_id.id tbl with
       | None ->
           raise
             (Semantic_error (l_val_id.loc, "Variable not defined in any scope"))
       | Some { entry_type; _ } -> (
           match entry_type with
-          | Variable vdr ->
-              let vd = !vdr in
+          | Variable vd_ref ->
+              let vd = !vd_ref in
+              (* fill in the missing values *)
               l_val_id.data_type <- vd.var_type;
               l_val_id.passed_by <- Value;
               l_val_id.frame_offset <- vd.frame_offset;
               l_val_id.parent_path <- vd.parent_path;
               l_val_id.data_type
-          | Parameter pdr ->
-              let pd = !pdr in
+          | Parameter pd_ref ->
+              let pd = !pd_ref in
+              (* fill in the missing values *)
               l_val_id.data_type <- pd.param_type;
               l_val_id.passed_by <- pd.pass_by;
               l_val_id.frame_offset <- pd.frame_offset;
@@ -210,9 +223,9 @@ let sem_simple_l_value (slv : simple_l_value) (sym_tbl : symbol_table) =
                    (l_val_id.loc, "Function cannot be used as l-value"))))
   | LString { data_type; _ } -> data_type
 
-let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
+let rec sem_l_value (lv : l_value) (tbl : symbol_table) =
   match lv with
-  | Simple slv -> sem_simple_l_value slv sym_tbl
+  | Simple slv -> sem_simple_l_value slv tbl
   | ArrayAccess { simple_l_value = slv; exprs } -> (
       let loc = get_loc_l_value lv in
       let rec comp_dims_exprs dims exprs loc =
@@ -224,13 +237,13 @@ let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
         | dims, [] -> dims
         | _ :: tl_dims, expr :: tl_exprs ->
             let lloc = get_loc_expr expr in
-            let expr_type = sem_expr expr sym_tbl in
+            let expr_type = sem_expr expr tbl in
             if expr_type <> Scalar Int then
               raise
                 (Semantic_error (lloc, "Array access dimension must be integer"))
             else comp_dims_exprs tl_dims tl_exprs lloc
       in
-      let l_val_type = sem_simple_l_value slv sym_tbl in
+      let l_val_type = sem_simple_l_value slv tbl in
       (* l_val_type will be the full type of this array *)
       let type_t, dims =
         (* type_t will be the element type of this array *)
@@ -243,8 +256,8 @@ let rec sem_l_value (lv : l_value) (sym_tbl : symbol_table) =
       let dims = comp_dims_exprs dims exprs loc in
       match dims with [] -> Scalar type_t | dims -> Array (type_t, dims))
 
-and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
-  match lookup_all func_call.id sym_tbl with
+and sem_func_call (func_call : func_call) (exprs : expr list) tbl =
+  match lookup_all func_call.id tbl with
   | None ->
       raise
         (Semantic_error
@@ -261,7 +274,7 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
             raise (Semantic_error (func_call.loc, "Parameter count mismatch"))
           else
             let expr_types =
-              List.map (fun expr -> sem_expr expr sym_tbl) exprs
+              List.map (fun expr -> sem_expr expr tbl) exprs
             in
             List.iter2
               (comp_var_param_types func_call.loc)
@@ -280,14 +293,14 @@ and sem_func_call (func_call : func_call) (exprs : expr list) sym_tbl =
                (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'")))
 
 (* don't need to do checks again for LValue and FuncCall again *)
-and sem_expr (expr : expr) (sym_tbl : symbol_table) =
+and sem_expr (expr : expr) (tbl : symbol_table) =
   match expr with
   | LitInt _ -> Scalar Int
   | LitChar _ -> Scalar Char
-  | LValue l_val -> sem_l_value l_val sym_tbl
+  | LValue l_val -> sem_l_value l_val tbl
   | EFuncCall func_call -> Scalar func_call.ret_type
   | UnAritOp (_, expr) -> (
-      match sem_expr expr sym_tbl with
+      match sem_expr expr tbl with
       | Scalar Int -> Scalar Int
       | _ ->
           raise
@@ -295,7 +308,7 @@ and sem_expr (expr : expr) (sym_tbl : symbol_table) =
                ( get_loc_expr expr,
                  "Unary arithmetic operator must be applied to integer" )))
   | BinAritOp (lhs, _, rhs) -> (
-      match (sem_expr lhs sym_tbl, sem_expr rhs sym_tbl) with
+      match (sem_expr lhs tbl, sem_expr rhs tbl) with
       | Scalar Int, Scalar Int -> Scalar Int
       | _, _ ->
           raise
@@ -303,10 +316,10 @@ and sem_expr (expr : expr) (sym_tbl : symbol_table) =
                ( get_loc_expr lhs,
                  "Binary arithmetic operator must be applied to integer" )))
 
-let sem_cond cond sym_tbl =
+let sem_cond cond tbl =
   match cond with
   | CompOp (lhs, _, rhs) -> (
-      match (sem_expr lhs sym_tbl, sem_expr rhs sym_tbl) with
+      match (sem_expr lhs tbl, sem_expr rhs tbl) with
       | Scalar Int, Scalar Int -> ()
       | Scalar Char, Scalar Char -> ()
       | _, _ ->
@@ -315,12 +328,12 @@ let sem_cond cond sym_tbl =
       )
   | _ -> ()
 
-let sem_stmt stmt sym_tbl =
+let sem_stmt stmt tbl =
   match stmt with
   | Assign (l_val, expr) -> (
-      let l_val_type = sem_l_value l_val sym_tbl in
+      let l_val_type = sem_l_value l_val tbl in
       let loc = get_loc_stmt stmt in
-      let expr_type = sem_expr expr sym_tbl in
+      let expr_type = sem_expr expr tbl in
       if Ast.l_string_dependence l_val then
         raise (Semantic_error (loc, "Cannot assign to string literal"))
       else if l_val_type <> expr_type then
@@ -334,28 +347,28 @@ let sem_stmt stmt sym_tbl =
         match expr_o with
         | None -> Nothing
         | Some expr -> (
-            match sem_expr expr sym_tbl with
+            match sem_expr expr tbl with
             | Scalar s -> s
             | _ -> raise (Semantic_error (loc, "Return type must be scalar")))
       in
-      let ret_type = type_of_ret loc sym_tbl in
+      let ret_type = type_of_ret loc tbl in
       if ret_type <> expr_type then
         raise (Semantic_error (loc, "Return type mismatch"))
       else ()
   | _ -> ()
 
-let sem_func_decl (func : Ast.func) (sym_tbl : symbol_table) =
-  match lookup func.id sym_tbl with
+let sem_func_decl (func : Ast.func) (tbl : symbol_table) =
+  match lookup func.id tbl with
   | Some _ ->
       raise
         (Semantic_error (func.loc, "Function already exists in current scope"))
   | None -> ()
 
-let ins_func_decl (func : Ast.func) (sym_tbl : symbol_table) =
-  insert func.loc func.id (Function (ref func)) sym_tbl
+let ins_func_decl (func : Ast.func) (tbl : symbol_table) =
+  insert func.loc func.id (Function (ref func)) tbl
 
-let sem_func_def (func : Ast.func) (sym_tbl : symbol_table) =
-  match lookup func.id sym_tbl with
+let sem_func_def (func : Ast.func) (tbl : symbol_table) =
+  match lookup func.id tbl with
   | None -> ()
   | Some { entry_type; _ } -> (
       match entry_type with
@@ -373,10 +386,10 @@ let sem_func_def (func : Ast.func) (sym_tbl : symbol_table) =
                  "Name already declared and is not a function: '" ^ func.id
                  ^ "'" )))
 
-let ins_func_def (func : Ast.func) (sym_tbl : symbol_table) =
-  insert func.loc func.id (Function (ref func)) sym_tbl
+let ins_func_def (func : Ast.func) (tbl : symbol_table) =
+  insert func.loc func.id (Function (ref func)) tbl
 
-let sem_program (func : Ast.func) (sym_tbl : symbol_table) =
+let sem_program (func : Ast.func) (tbl : symbol_table) =
   if List.length func.params <> 0 then
     raise (Semantic_error (func.loc, "Main function cannot have parameters"))
   else if func.ret_type <> Nothing then
@@ -404,5 +417,5 @@ let sem_program (func : Ast.func) (sym_tbl : symbol_table) =
             raise
               (Symbol_table_error
                  (!p.loc, "Lingering parameter definition: '" ^ !p.id ^ "'")))
-      sym_tbl.table;
+      tbl.table;
   func
