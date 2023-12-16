@@ -1,19 +1,32 @@
-.PHONY: all install uninstall clean distclean
+runtime_lib/libgrace.a:
+	cd runtime_lib && make && make clean
 
-all:
+runtime: runtime_lib/libgrace.a
+
+runtime_keep_all_files:
 	cd runtime_lib && make
-	@ dune build @all
+
+gracec:
+	@ dune build
+
+install: runtime gracec
+	@ dune install
+	@ dune clean
+
+install_keep_all_files: runtime gracec
+	@ dune install
 
 uninstall: install
 	@ dune uninstall
+
+all: runtime gracec
 
 clean:
 	cd runtime_lib && make clean
 	@ dune clean
 
-install: all
-	@ dune install
-
 distclean:
 	cd runtime_lib && make distclean
 	@ dune clean
+
+.PHONY: all clean distclean
