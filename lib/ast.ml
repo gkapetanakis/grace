@@ -1,3 +1,5 @@
+(* DONE *)
+(* loc is a type representing the position (line, column) of an AST node in the source file *)
 type loc = Error.loc
 type scalar = Int | Char | Nothing
 type data_type = Scalar of scalar | Array of scalar * int option list
@@ -116,6 +118,9 @@ and local_def = VarDef of var_def | FuncDecl of func | FuncDef of func
 
 type program = MainFunc of func
 
+(* auxillary functions to extract the location
+   of various AST types *)
+
 let get_loc_simple_l_value = function
   | Id id -> id.loc
   | LString lstring -> lstring.loc
@@ -151,9 +156,11 @@ let get_loc_local_def = function
   | FuncDecl func -> func.loc
   | FuncDef func -> func.loc
 
-let l_string_dependence l_v =
+(* returns true if an l-value type (which is recursive)
+   contains a string literal at its lowest level *)
+let contains_str_literal l_val =
   let aux = function Id _ -> false | LString _ -> true in
-  match l_v with
+  match l_val with
   | Simple simple_l_value -> aux simple_l_value
   | ArrayAccess { simple_l_value; _ } -> aux simple_l_value
 
@@ -172,21 +179,39 @@ let reorganize_local_defs (local_defs : local_def list) =
   let vars, decls, funcs = reorganize_local_defs' local_defs [] [] [] in
   (List.rev vars, List.rev decls, List.rev funcs)
 
+(*
+  fun f(): nothing
+    fun g(): nothing
+  {}
+  
+  the parent name of f will be <Symbol.global_scope_name>
+  the parent name of g will be <Symbol.global_scope_name>.f
+*)
 let get_parent_name (func : func) =
   let parent_path = List.filter (fun x -> x <> "") func.parent_path in
   String.concat "." (List.rev parent_path)
 
+(*
+  fun f(): nothing
+    fun g(): nothing
+  {}
+  
+  the name of f will be <Symbol.global_scope_name>.f
+  the name of g will be <Symbol.global_scope_name>.f.g
+*)
 let get_func_name (func : func) =
   let full_path = [ get_parent_name func; func.id ] in
   let full_path = List.filter (fun x -> x <> "") full_path in
   String.concat "." full_path
 
-let get_parent_frame_name (func : func) = "frame__" ^ get_parent_name func
-let get_frame_name (func : func) = "frame__" ^ get_func_name func
+(* used when renaming functions to avoid name conflicts in codegen *)
 let get_proper_parent_func_name (func : func) = get_parent_name func
 let get_proper_func_name (func : func) = get_func_name func
-
 let get_proper_func_call_name (func_call : func_call) =
   let full_path = List.rev func_call.callee_path @ [ func_call.id ] in
   let full_path = List.filter (fun x -> x <> "") full_path in
   String.concat "." full_path
+
+(* used when creating the function struct types *)
+let get_parent_frame_name (func : func) = "frame__" ^ get_parent_name func
+let get_frame_name (func : func) = "frame__" ^ get_func_name func

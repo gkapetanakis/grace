@@ -1,13 +1,13 @@
-(* debug flag *)
+(* DONE *)
 let debug = true
 let compiler_name = ref String.empty
-
+let runtime_path = "runtime_lib/"
+let runtime_name = "grace"
+let linker = "clang-14"
 let dev_null =
   if Sys.os_type = "Unix" then "/dev/null"
   else if Sys.os_type = "Win32" || Sys.os_type = "Cygwin" then "NUL"
   else failwith ("Unsupported operating system: " ^ Sys.os_type)
-
-let linker = "clang-14"
 
 (* input flags and filename *)
 let optimizations = ref false
@@ -26,8 +26,6 @@ let print_debug_info () =
   print_endline !filename
   [@@ocamlformat "disable"]
 
-(* helper functions *)
-
 let handle_incorrect_call () =
   print_endline ("Usage: "^ !compiler_name ^ " [Options] file");
   print_endline ("For more info, try: " ^ !compiler_name ^ " --help");
@@ -45,11 +43,13 @@ let print_help_message () =
   print_endline "      File argument is not required in this case and will be ignored if provided.";
   [@@ocamlformat "disable"]
 
+(* name.a.b -> name.a *)
 let remove_extension filename =
   match String.rindex_opt filename '.' with
   | None -> filename
   | Some final_dot_index -> String.sub filename 0 final_dot_index
 
+(* path/to/name -> name *)
 let remove_path filename =
   match String.rindex_opt filename '/' with
   | None -> filename
@@ -107,7 +107,7 @@ let () =
   if !filename = String.empty then filename := "stdin";
   Lexing.set_filename lexbuf !filename;
   try
-    let _, _, irgen, codegen_imm, codegen_asm, codegen_obj =
+    let the_module, context, irgen, codegen_imm, codegen_asm, codegen_obj =
       Grace_lib.Codegen.init_codegen (remove_path !filename)
     in
     let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
@@ -119,8 +119,7 @@ let () =
     close_out imm_outchan;
     close_out asm_outchan;
     close_out obj_outchan;
-    let runtime_path = "runtime_lib/" in
-    let runtime_name = "grace" in
+    Grace_lib.Codegen.dispose_codegen the_module context
     if (not !asm_stdin_stdout) && not !imm_stdin_stdout then
       let exit_code =
         Sys.command
@@ -135,7 +134,7 @@ let () =
       Grace_lib.Error.pr_lexing_error (loc, msg);
       exit 1
   | Grace_lib.Parser.Error ->
-      (* built-in Menhir error... *)
+      (* built-in Menhir error *)
       Grace_lib.Error.pr_parser_error
         ( (Lexing.lexeme_start_p lexbuf, Lexing.lexeme_end_p lexbuf),
           "Syntax error" );

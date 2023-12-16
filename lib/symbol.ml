@@ -1,6 +1,14 @@
+(* DONE *)
+(* all symbol table related types and functions used during semantic analysis*)
+
 open Error
 
-let start = 1
+(* the offset of a function frame struct at which we start adding fields *)
+(* offset 0 is reserved for the (automatically-generated) frame struct pointer
+   to the given function's parent function (used in nested functions) *)
+let first_offset = 1
+
+(* the name of the first scope that is opened *)
 let global_scope_name = "main"
 
 (* symbol table entry type type (see below to understand better) *)
@@ -52,6 +60,7 @@ let get_and_increment_offset (sym_tbl : symbol_table) =
   scope.next_offset <- scope.next_offset + 1;
   offset
 
+(* insert into current scope *)
 let insert loc (id : string) (entry_type : entry_type) (sym_tbl : symbol_table)
     =
   match sym_tbl.scopes with
@@ -79,7 +88,7 @@ let lookup_all (id : string) (sym_tbl : symbol_table) =
   | _ -> Hashtbl.find_opt sym_tbl.table id
 
 let open_scope (func_id : string) (sym_tbl : symbol_table) =
-  let scope = { next_offset = start; entries = [] } in
+  let scope = { next_offset = first_offset; entries = [] } in
   sym_tbl.scopes <- scope :: sym_tbl.scopes;
   sym_tbl.parent_path <-
     (if func_id = String.empty then sym_tbl.parent_path

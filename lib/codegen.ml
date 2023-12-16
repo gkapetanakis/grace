@@ -1,6 +1,103 @@
+(* almost DONE, check gen_func_arg *)
+(* the module that translates the AST into LLVM IR
+   and subsequently produces assembly, object files and executables *)
+
+(* understanding the next few comments is vital in understading this module *)
+(*
+  LLVM does not support nested functions, but Grace does,
+  so in order to use LLVM for optimizing and translating to
+  assembly/machine code the following workaround is done:
+
+  $ consider a simple Grace program:
+  fun f(): nothing
+    var i: int;
+    var c: char;
+    fun g(arg: int)
+      fun h(): nothing
+      {
+        c <- 'a';
+      }
+    {
+      i <- 5;
+      h();
+    }
+  {
+    g(2);
+  }
+
+  // the equivalent LLVM representation (written using C syntax) is:
+  struct struct_f {
+    void* parent;
+    int* i;
+    char* c;
+  };
+
+  struct struct_g {
+    void* parent;
+    int* arg;
+  };
+
+  struct struct_h {
+    void* parent;
+  };
+
+  void h(struct_g* parent) {
+    *(parent->parent->c) = 'a';
+  }
+
+  void g(struct_f* parent, int arg) {
+    *(parent->i) = 5;
+
+    struct_g sg = {
+        .parent = parent,
+        .arg = &arg,
+    };
+
+    h(sg);
+  }
+
+  void f() {
+    int i;
+    char c;
+
+    struct_f sf = {
+        .parent = NULL,
+        .i = &i,
+        .c = &c,
+    };
+
+    g(sf, 2);
+  }   
+*)
+
+(*
+  in Grace, the following is allowed:
+
+  fun f(): nothing
+    fun f(): nothing
+      fun f(): nothing
+      {}
+    {}
+  {}
+
+  when un-nesting functions (as shown previously)
+  the names of the functions need to change
+
+  the current implementation produces the following
+  LLVM IR (in C syntax, ignoring the virtual main for simplicity):
+
+  void global.f.f.f() {}
+  void global.f.f() {}
+  void global.f() {}
+*)
+
 (* initialize llvm *)
 Llvm_all_backends.initialize ()
 
+(* the reason everything below is in a function is to allow
+   compilation of multiple files by the same process *)
+(* the compiler doesn't actually make use of that functionality,
+   but it's very useful in testing *)
 let init_codegen filename =
   (* essential objects required by llvm *)
   let context = Llvm.create_context () in
@@ -69,7 +166,6 @@ let init_codegen filename =
         aux s dims
   in
 
-  (* just the var type (no pointers) *)
   let lltype_of_var_def (vd : Ast.var_def) = lltype_of_data_type vd.var_type in
 
   (* by value -> parameter type (no pointer)
@@ -100,6 +196,7 @@ let init_codegen filename =
           (Error.Internal_compiler_error ("Frame type not found: " ^ frame_name))
   in
 
+  (* unused function (hence the _ at the start of the name) *)
   let _get_all_frame_type_ptrs (Ast.MainFunc main_func : Ast.program) =
     let rec aux (acc : Llvm.lltype list) (funcs : Ast.func list list) =
       match funcs with
@@ -112,6 +209,8 @@ let init_codegen filename =
     aux [] [ [ main_func ] ]
   in
 
+  (* generates the struct type of the given function
+     used when calling its nested functions *)
   let gen_frame_type (func : Ast.func) =
     let parent_frame_type_ptr =
       match get_parent_frame_type_ptr_option func with
@@ -175,7 +274,10 @@ let init_codegen filename =
         Llvm.build_gep l_val_ptr e_v_array "array_access" builder
   and gen_l_val_id frame caller_path (l_val_id : Ast.l_value_id) =
     let Ast.{ id; passed_by; frame_offset; parent_path; _ } = l_val_id in
+    (* hops: how many levels of nesting occur between the
+       declaration of a variable/function and its use as this l-value *)
     let hops = List.length caller_path - List.length parent_path in
+    (* the next line builds the required code to access the correct l-value  *)
     let frame_ptr = get_frame_ptr frame hops in
     let element_ptr =
       Llvm.build_struct_gep frame_ptr frame_offset "element_ptr" builder
@@ -204,9 +306,9 @@ let init_codegen filename =
                 Llvm.build_gep l_val_ptr
                   [| c32 0; c32 0 |]
                   "array_elemptr" builder
-                (*
-          Llvm.build_struct_gep l_val_ptr 0 "array_elemptr" builder
-          PROBABLY EQUIVALENT CODE, MIGHT CHECK LATER  
+        (* !!!
+         * !!! Llvm.build_struct_gep l_val_ptr 0 "array_elemptr" builder
+         * !!! PROBABLY EQUIVALENT CODE, MIGHT CHECK LATER  
         *)
             | _ -> gen_l_value frame caller_path l_v)
         | Ast.Simple (Ast.LString _) -> gen_l_value frame caller_path l_v
@@ -249,8 +351,8 @@ let init_codegen filename =
     in
     let func_args = frame_ptr @ func_args in
     let ll_local_var_name =
+      (* void returns must not be named *)
       if func_call.ret_type = Ast.Nothing then ""
-        (* void returns shouldn't be named *)
       else "func_call_" ^ func_call.id
     in
     Llvm.build_call func_decl (Array.of_list func_args) ll_local_var_name
@@ -291,7 +393,6 @@ let init_codegen filename =
         let func = Llvm.block_parent (Llvm.insertion_block builder) in
         let rhs_block = Llvm.append_block context "rhs" func in
         let merge_block = Llvm.append_block context "merge" func in
-
         let lhs_block_final = Llvm.insertion_block builder in
         let _ =
           match op with
@@ -332,6 +433,7 @@ let init_codegen filename =
               | Llvm.Opcode.Ret -> aux tl true
               | _ -> aux tl false))
       | hd :: _, true ->
+          (* the compiler's only warning :) *)
           prerr_endline
             ("Warning: unreachable code at "
             ^ Error.string_of_loc (Ast.get_loc_stmt hd))
@@ -351,7 +453,6 @@ let init_codegen filename =
         let ret_count = ref 0 in
         let cond = gen_cond frame caller_path cond in
         let func = Llvm.block_parent (Llvm.insertion_block builder) in
-
         let then_block = Llvm.append_block context "then" func in
         let else_block = Llvm.append_block context "else" func in
         let merge_block = Llvm.append_block context "merge" func in
@@ -421,13 +522,13 @@ let init_codegen filename =
             in
             ignore (gen_expr frame caller_path expr);
             ignore (Llvm.build_ret_void builder)
+        (* possible case 3 *)
+        | _, Some expr ->
+          let ret_val = gen_expr frame caller_path expr in
+          ignore (Llvm.build_ret ret_val builder))
         | _, None ->
             raise
               (Error.Internal_compiler_error "Impossible (gen_expr, Return, 3)")
-        (* possible case 3 *)
-        | _, Some expr ->
-            let ret_val = gen_expr frame caller_path expr in
-            ignore (Llvm.build_ret ret_val builder))
   in
 
   let gen_func_decl (func : Ast.func) =
@@ -512,6 +613,9 @@ let init_codegen filename =
     gen_func_def main_func
   in
 
+  (* add every possible optimization except those commented out *)
+  (* this is the new LLVM pass manager,
+     which automatically orders the optimizations *)
   let add_optimizations pass_mgr =
     let optimizations =
       [
@@ -569,6 +673,7 @@ let init_codegen filename =
     List.iter (fun opt -> opt pass_mgr) optimizations
   in
 
+  (* turn the AST with main_func as its root into LLVM IR *)
   let irgen main_func enable_optimizations =
     gen_all_frame_types main_func;
     gen_main main_func;
@@ -579,11 +684,13 @@ let init_codegen filename =
     Llvm_analysis.assert_valid_module the_module
   in
 
+  (* emit the LLVM IR representation of the_module to outchan*)
   let codegen_imm outchan =
     let out = Llvm.string_of_llmodule the_module in
     Out_channel.output_string outchan out
   in
 
+  (* emit the assembly representation of the_module to outchan *)
   let codegen_asm outchan =
     let out =
       Llvm.MemoryBuffer.as_string
@@ -593,6 +700,7 @@ let init_codegen filename =
     Out_channel.output_string outchan out
   in
 
+  (* emit the object file representation of the_module to outchan *)
   let codegen_obj outchan =
     let out =
       Llvm.MemoryBuffer.as_string

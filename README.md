@@ -9,10 +9,10 @@ The compiler works as follows:
     - After the entire AST has been created and the semantic analysis has concluded,
       it is translated into LLVM IR, using the OCaml LLVM bindings.
     - The IR is (optionally) optimized before being translated to the assembly used by the host machine
-    - LLVM emits LLVM IR code (in a .imm file), host machine assembly code (in a .asm file),
-      as well as an object file (in a .o file)
-    - Clang is finally used to link the .o file with the Grace runtime library and the C runtime library
-      and create the final executable (in a .exe file)
+    - LLVM emits LLVM IR code (in a `.imm` file), host machine assembly code (in a `.asm` file),
+      as well as an object file (in a `.o` file)
+    - Clang is finally used to link the `.o` file with the Grace runtime library and the C runtime library
+      and create the final executable (in a `.exe` file)
     - If any errors are encountered at any phase of the compilation,
       an error message is output to stderr and the compilation fails
 
@@ -21,11 +21,11 @@ the grammar of the language, and LLVM IR.
 
 ## Data Flow
 
-'lexer.mll' tokenizes the input and passes the tokens to 'parser.mly'
-The functions of 'parser.mly' call functions from 'wrapper.ml'
-The functions of 'wrapper.ml' call functions from 'sem.ml', 'symbol.ml'
+`lexer.mll` tokenizes the input and passes the tokens to `parser.mly`
+The functions of `parser.mly` call functions from `wrapper.ml`
+The functions of `wrapper.ml` call functions from `sem.ml`, `symbol.ml`
 The AST is created
-'codegen.ml' does the rest
+`codegen.ml` does the rest
 
 ## Nested Functions
 
@@ -33,7 +33,8 @@ LLVM does not support nested functions, but Grace does.
 In order to use LLVM for optimizing and translating to
 assembly/machine code the following workaround is done:
 
-$ Consider a simple Grace program:
+Consider a simple Grace program:
+<code>
 fun f(): nothing
     var i: int;
     var c: char;
@@ -49,8 +50,10 @@ fun f(): nothing
 {
     g(2);
 }
+</code>
 
-// The equivalent LLVM representation (written using C syntax) is:
+The equivalent LLVM representation (written using C syntax) is:
+<code>
 struct struct_f {
     void* parent;
     int* i;
@@ -93,8 +96,9 @@ void f() {
 
     g(sf, 2);
 }
+</code>
 
-The code that does this can be found in 'codegen.ml'
+The code that does this can be found in `codegen.ml`
 
 ## Virtual Main
 
@@ -104,7 +108,8 @@ The linker of clang expects to find an 'int main()'
 function that signifies the entrypointof the program.
 The way the compiler handles that is as follows:
 
-$ Consider a simple Grace program
+Consider a simple Grace program
+<code>
 fun f(): nothing {}
 
 // The equivalent LLVM representation (written using C syntax) is:
@@ -113,6 +118,29 @@ void main_f() {}
 int main() {
     main_f();
 }
+</code>
 
-The code that does this can be found in 'wrapper.ml'
+The code that does this can be found in `wrapper.ml`
 (admittedly probably not the most fitting place for it)
+
+## Function Name Resolution
+
+In Grace, the following is allowed:
+<code>
+fun f(): nothing
+    fun f(): nothing
+        fun f(): nothing
+        {}
+    {}
+{}
+</code>
+
+When un-nesting functions (as shown previously)
+the names of the functions need to change.
+The current implementation would produce the following
+LLVM IR (in C syntax, ignoring the virtual main for simplicity):
+<code>
+void global.f.f.f() {}
+void global.f.f() {}
+void global.f() {}
+</code>

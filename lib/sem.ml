@@ -1,3 +1,7 @@
+(* almost DONE, check sem_expr *)
+(* all semantic actions done during semantic analysis,
+   except from symbol table related stuff*)
+
 open Ast
 open Symbol
 open Error
@@ -270,15 +274,19 @@ and sem_func_call (func_call : func_call) (exprs : expr list) tbl =
           let param_types =
             List.map (fun (pd : param_def) -> pd.param_type) fd.params
           in
-          if List.length param_types <> List.length exprs then
-            raise (Semantic_error (func_call.loc, "Parameter count mismatch"))
+          if List.length exprs < List.length param_types then
+            raise (Semantic_error (func_call.loc, "Too few arguments in function call"))
+          else if List.length expr > List.length param_types then
+            raise (Semantic_error (func_call.loc, "Too many arguments in function call"))
           else
             let expr_types =
               List.map (fun expr -> sem_expr expr tbl) exprs
             in
+            (* check that argument types match *)
             List.iter2
               (comp_var_param_types func_call.loc)
               expr_types param_types;
+            (* fill in missing information of argument AST nodes *)
             func_call.args <-
               List.map2
                 (fun (expr : expr) (param : param_def) ->
@@ -292,11 +300,13 @@ and sem_func_call (func_call : func_call) (exprs : expr list) tbl =
             (Semantic_error
                (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'")))
 
-(* don't need to do checks again for LValue and FuncCall again *)
+
 and sem_expr (expr : expr) (tbl : symbol_table) =
   match expr with
   | LitInt _ -> Scalar Int
   | LitChar _ -> Scalar Char
+  (* LValue and FuncCall will have already been checked at this point *)
+  (* !!! why do we call sem_l_value again then? *)
   | LValue l_val -> sem_l_value l_val tbl
   | EFuncCall func_call -> Scalar func_call.ret_type
   | UnAritOp (_, expr) -> (
@@ -331,13 +341,13 @@ let sem_cond cond tbl =
 let sem_stmt stmt tbl =
   match stmt with
   | Assign (l_val, expr) -> (
-      let l_val_type = sem_l_value l_val tbl in
       let loc = get_loc_stmt stmt in
+      let l_val_type = sem_l_value l_val tbl in
       let expr_type = sem_expr expr tbl in
-      if Ast.l_string_dependence l_val then
+      if Ast.contains_str_literal l_val then
         raise (Semantic_error (loc, "Cannot assign to string literal"))
       else if l_val_type <> expr_type then
-        raise (Semantic_error (loc, "Type mismatch"))
+        raise (Semantic_error (loc, "Assignment type mismatch"))
       else
         match l_val_type with
         | Array _ -> raise (Semantic_error (loc, "Cannot assign to array"))
@@ -395,7 +405,7 @@ let sem_program (func : Ast.func) (tbl : symbol_table) =
   else if func.ret_type <> Nothing then
     raise (Semantic_error (func.loc, "Main function cannot have return type"))
   else
-    (* check for any lingering things that might be left behind from parsing... *)
+    (* check for any lingering things that might be left behind from parsing *)
     Hashtbl.iter
       (fun _ entry ->
         match entry.entry_type with

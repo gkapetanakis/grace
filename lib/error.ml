@@ -1,3 +1,4 @@
+(* DONE *)
 (* every possible error of the compiler, plus functions for printing them nicely *)
 
 type loc = Lexing.position * Lexing.position

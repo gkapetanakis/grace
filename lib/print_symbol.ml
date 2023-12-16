@@ -1,3 +1,4 @@
+(* DONE *)
 (* functions for printing Symbol table entries in a readable manner
    (used only for debugging) *)
 
