@@ -19,6 +19,14 @@ The compiler works as follows:
 In short, two intermediate representations are used, one that closely matches
 the grammar of the language, and LLVM IR.
 
+## Data Flow
+
+'lexer.mll' tokenizes the input and passes the tokens to 'parser.mly'
+The functions of 'parser.mly' call functions from 'wrapper.ml'
+The functions of 'wrapper.ml' call functions from 'sem.ml', 'symbol.ml'
+The AST is created
+'codegen.ml' does the rest
+
 ## Nested Functions
 
 LLVM does not support nested functions, but Grace does.
@@ -85,3 +93,26 @@ void f() {
 
     g(sf, 2);
 }
+
+The code that does this can be found in 'codegen.ml'
+
+## Virtual Main
+
+The linkage of the emitted object file with the Grace and C
+runtime libraries is done using clang.
+The linker of clang expects to find an 'int main()'
+function that signifies the entrypointof the program.
+The way the compiler handles that is as follows:
+
+$ Consider a simple Grace program
+fun f(): nothing {}
+
+// The equivalent LLVM representation (written using C syntax) is:
+void main_f() {}
+
+int main() {
+    main_f();
+}
+
+The code that does this can be found in 'wrapper.ml'
+(admittedly probably not the most fitting place for it)
