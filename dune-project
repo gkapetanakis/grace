@@ -5,23 +5,13 @@
 
 (generate_opam_files true)
 
-(source
- (github username/reponame))
-
 (authors "Dimitrios Georgousis" "Georgios-Alexios Kapetanakis")
 
-(maintainers "")
-
-(license LICENSE)
-
-(documentation https://url/to/documentation)
+(license "MIT")
 
 (package
  (name grace)
- (synopsis "A compiler project for NTUA Compilers course")
- (description "A compiler project for NTUA Compilers course. We build a compiler for the 'Grace' programming language using OCaml and related tools.")
- (depends ocaml dune)
- (tags
-  (topics "to describe" your project)))
+ (synopsis "A compiler project for the NTUA Compilers course")
+ (depends ocaml dune))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
