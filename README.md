@@ -193,7 +193,7 @@ int main() {
 }
 ```
 
-The code that does this can be found in `wrapper.ml`
+The code that does this can be found in `wrapper.ml` (`insert_virtual_main` function)
 (admittedly probably not the most fitting place for it)
 
 ## Function Name Resolution
@@ -218,9 +218,11 @@ void global.f.f() {}
 void global.f() {}
 ```
 ## Runtime library
+
 The runtime library is implemented in C except for functions:
 - `strlen`
 - `strcmp`
 - `strcpy`
 - `strcat`
+
 which are linked to our program implicitly by clang.
