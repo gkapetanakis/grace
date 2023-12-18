@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := all
+
 runtime_lib/libgrace.a:
 	cd runtime_lib && make && make clean
 
