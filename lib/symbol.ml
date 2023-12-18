@@ -1,4 +1,3 @@
-(* DONE *)
 (* all symbol table related types and functions used during semantic analysis*)
 
 open Error

@@ -1,4 +1,3 @@
-(* DONE *)
 (* all semantic actions done during semantic analysis,
    except from symbol table related stuff*)
 

@@ -1,4 +1,3 @@
-(* DONE *)
 (* the module that translates the AST into LLVM IR
    and subsequently produces assembly, object files and executables *)
 

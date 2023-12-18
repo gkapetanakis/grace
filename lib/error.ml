@@ -1,4 +1,3 @@
-(* DONE *)
 (* every possible error of the compiler, plus functions for printing them nicely *)
 
 (* loc is a type which saves the starting and ending position of a token.

@@ -51,7 +51,8 @@ description  Note: LLVM should be installed first.
 
 ## Usage
 
-You may use the `dune build system` or the `Makefile`, which is essentially a wrapper of dune commands.
+You may use the `dune build system` or the `Makefile` to build the compiler, which is essentially a
+wrapper of dune commands.
 
 Suppose you execute `make all`. Now you can use the Compiler as follows:
     - `dune exec gracec -- <options passed to compiler>`
@@ -66,6 +67,11 @@ If you install the compiler you can also execute:
 
 Whichever way you may pick to run the compiler, you should do it from the `root directory` of this
 project. More specifically, the same directory that contains the `dune-project` file.
+
+`make uninstall` might give you an error:
+`Error: Directory /home/<user>/.opam/default/bin is not empty, cannot delete (ignoring).`
+Which should be ignored, since it is expected that you usually have more things installed in `opam/default/bin`
+directory.
 
 ## Overview
 
@@ -85,6 +91,11 @@ The compiler works as follows:
 
 In short, two intermediate representations are used, one that closely matches
 the grammar of the language, and LLVM IR.
+
+## Testing
+
+When the compiler is built some semantic tests are run, which the compiler should pass. You can also execute
+our semantic tests -both erroneous and correct programs- by running `dune runtest` from the root directory of the project.
 
 ## Data Flow
 

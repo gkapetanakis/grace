@@ -1,4 +1,3 @@
-(* DONE *)
 (* header *)
 {
   open Error

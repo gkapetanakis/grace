@@ -1,4 +1,3 @@
-(* DONE *)
 (* functions for printing Ast nodes in a readable manner
    (used only for debugging) *)
 
