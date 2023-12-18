@@ -54,13 +54,13 @@ description  Note: LLVM should be installed first.
 You may use the `dune build system` or the `Makefile`, which is essentially a wrapper of dune commands, to build the compiler.
 
 Suppose you execute `make all`. Now you can use the Compiler as follows:
-    - `dune exec gracec -- <options passed to compiler>`
-    - `dune exec bin/main.exe -- <options passed to compiler>`
-    - `dune exec _build/default/bin/main.exe -- <options passed to compiler>`
+- `dune exec gracec -- <options passed to compiler>`
+- `dune exec bin/main.exe -- <options passed to compiler>`
+- `dune exec _build/default/bin/main.exe -- <options passed to compiler>`
 
 Installing the compiler will install it as an ocaml module in the `opam directory`.
 If you install the compiler you can also execute:
-    - `gracec <options passed to compiler>`
+- `gracec <options passed to compiler>`
 
 `<options passed to compiler>` are the options specified in the language documentation.
 
@@ -75,18 +75,14 @@ directory.
 ## Overview
 
 The compiler works as follows:
-    - Lexical analysis is the first step and is implemented using ocamllex
-    - Parsing is done along with the lexical analysis and is implemented using Menhir
-    - Semantic analysis is done alongside the parsing
-    - After the entire AST has been created and the semantic analysis has concluded,
-      it is translated into LLVM IR, using the OCaml LLVM bindings.
-    - The IR is (optionally) optimized before being translated to the assembly used by the host machine
-    - LLVM emits LLVM IR code (in a `.imm` file), host machine assembly code (in a `.asm` file),
-      as well as an object file (in a `.o` file)
-    - Clang is finally used to link the `.o` file with the Grace runtime library and the C runtime library
-      and create the final executable (in a `.exe` file)
-    - If any errors are encountered at any phase of the compilation,
-      an error message is output to stderr and the compilation fails
+- Lexical analysis is the first step and is implemented using ocamllex
+- Parsing is done along with the lexical analysis and is implemented using Menhir
+- Semantic analysis is done alongside the parsing
+- After the entire AST has been created and the semantic analysis has concluded, it is translated into LLVM IR, using the OCaml LLVM bindings.
+- The IR is (optionally) optimized before being translated to the assembly used by the host machine
+- LLVM emits LLVM IR code (in a `.imm` file), host machine assembly code (in a `.asm` file), as well as an object file (in a `.o` file)
+- Clang is finally used to link the `.o` file with the Grace runtime library and the C runtime library and create the final executable (in a `.exe` file)
+- If any errors are encountered at any phase of the compilation, an error message is output to stderr and the compilation fails
 
 In short, two intermediate representations are used, one that closely matches
 the grammar of the language, and LLVM IR.
@@ -223,8 +219,8 @@ void global.f() {}
 ```
 ## Runtime library
 The runtime library is implemented in C except for functions:
-    - `strlen`
-    - `strcmp`
-    - `strcpy`
-    - `strcat`
+- `strlen`
+- `strcmp`
+- `strcpy`
+- `strcat`
 which are linked to our program implicitly by clang.
