@@ -18,6 +18,7 @@ install_keep_all_files: runtime gracec
 
 uninstall: install_keep_all_files
 	@ dune uninstall
+	@ dune clean
 
 all: runtime gracec
 
