@@ -34,7 +34,7 @@ In order to use LLVM for optimizing and translating to
 assembly/machine code the following workaround is done:
 
 Consider a simple Grace program:
-<code>
+```
 fun f(): nothing
     var i: int;
     var c: char;
@@ -50,10 +50,10 @@ fun f(): nothing
 {
     g(2);
 }
-</code>
+```
 
 The equivalent LLVM representation (written using C syntax) is:
-<code>
+```
 struct struct_f {
     void* parent;
     int* i;
@@ -96,7 +96,7 @@ void f() {
 
     g(sf, 2);
 }
-</code>
+```
 
 The code that does this can be found in `codegen.ml`
 
@@ -109,7 +109,7 @@ function that signifies the entrypointof the program.
 The way the compiler handles that is as follows:
 
 Consider a simple Grace program
-<code>
+```
 fun f(): nothing {}
 
 // The equivalent LLVM representation (written using C syntax) is:
@@ -118,7 +118,7 @@ void main_f() {}
 int main() {
     main_f();
 }
-</code>
+```
 
 The code that does this can be found in `wrapper.ml`
 (admittedly probably not the most fitting place for it)
@@ -126,21 +126,21 @@ The code that does this can be found in `wrapper.ml`
 ## Function Name Resolution
 
 In Grace, the following is allowed:
-<code>
+```
 fun f(): nothing
     fun f(): nothing
         fun f(): nothing
         {}
     {}
 {}
-</code>
+```
 
 When un-nesting functions (as shown previously)
 the names of the functions need to change.
 The current implementation would produce the following
 LLVM IR (in C syntax, ignoring the virtual main for simplicity):
-<code>
+```
 void global.f.f.f() {}
 void global.f.f() {}
 void global.f() {}
-</code>
+```
