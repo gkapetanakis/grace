@@ -4,6 +4,7 @@ let compiler_name = ref String.empty
 let runtime_path = "runtime_lib/"
 let runtime_name = "grace"
 let linker = "clang-14"
+
 let dev_null =
   if Sys.os_type = "Unix" then "/dev/null"
   else if Sys.os_type = "Win32" || Sys.os_type = "Cygwin" then "NUL"
@@ -119,7 +120,7 @@ let () =
     close_out imm_outchan;
     close_out asm_outchan;
     close_out obj_outchan;
-    Grace_lib.Codegen.dispose_codegen the_module context
+    Grace_lib.Codegen.dispose_codegen the_module context;
     if (not !asm_stdin_stdout) && not !imm_stdin_stdout then
       let exit_code =
         Sys.command

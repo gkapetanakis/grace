@@ -10,7 +10,7 @@ let compile_to_obj filename =
     let ast = Grace_lib.Parser.program Grace_lib.Lexer.token lexbuf in
     irgen ast false;
     codegen_obj outchan;
-    Grace_lib.Codegen.dispose_codegen (the_module, context);
+    Grace_lib.Codegen.dispose_codegen the_module context;
     close_in inchan;
     close_out outchan
   with err -> (

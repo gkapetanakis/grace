@@ -94,7 +94,7 @@ let verify_param_def (pd : param_def) =
   | _ -> ()
 
 (* if a variable with the given variable type cannot be used as an argument
-  for a parameter of the given parameter type, this function throws an error *)
+   for a parameter of the given parameter type, this function throws an error *)
 let comp_var_param_types loc (vt : var_type) (pt : param_type) =
   match (vt, pt) with
   | Array (t1, dims_var), Array (t2, dims_param) ->
@@ -275,13 +275,15 @@ and sem_func_call (func_call : func_call) (exprs : expr list) tbl =
             List.map (fun (pd : param_def) -> pd.param_type) fd.params
           in
           if List.length exprs < List.length param_types then
-            raise (Semantic_error (func_call.loc, "Too few arguments in function call"))
-          else if List.length expr > List.length param_types then
-            raise (Semantic_error (func_call.loc, "Too many arguments in function call"))
+            raise
+              (Semantic_error
+                 (func_call.loc, "Too few arguments in function call"))
+          else if List.length exprs > List.length param_types then
+            raise
+              (Semantic_error
+                 (func_call.loc, "Too many arguments in function call"))
           else
-            let expr_types =
-              List.map (fun expr -> sem_expr expr tbl) exprs
-            in
+            let expr_types = List.map (fun expr -> sem_expr expr tbl) exprs in
             (* check that argument types match *)
             List.iter2
               (comp_var_param_types func_call.loc)
@@ -299,7 +301,6 @@ and sem_func_call (func_call : func_call) (exprs : expr list) tbl =
           raise
             (Semantic_error
                (func_call.loc, "Function not defined: '" ^ func_call.id ^ "'")))
-
 
 and sem_expr (expr : expr) (tbl : symbol_table) =
   match expr with

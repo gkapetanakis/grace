@@ -8,3 +8,4 @@ _build
 **/*.o
 **/*.s
 **/*.a
+grace.opam

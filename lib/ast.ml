@@ -19,7 +19,6 @@ type var_def = {
   id : string;
   var_type : var_type;
   loc : loc;
-
   (* implicit information for variable definitions
    * fields used for semantic error checking and code generation *)
   frame_offset : int;
@@ -32,7 +31,6 @@ type param_def = {
   param_type : param_type;
   pass_by : pass_by;
   loc : loc;
-
   (* implicit information for parameter definitions
    * fields used for semantic error checking and code generation *)
   mutable frame_offset : int;
@@ -43,7 +41,6 @@ type l_value_id = {
   (* explicit information for l-value (type: identifier) *)
   id : string;
   loc : loc;
-
   (* implicit information used in code generation.
    * These fields are set during the semantic analysis and
    * they match the same information of the identifier they refer to *)
@@ -67,7 +64,6 @@ and func_call = {
   (* explicit information for function call immediately obvious from parsed data *)
   id : string;
   loc : loc;
-
   (* implicit information set by semantic analysis. These fields are
    * usefull for code generation. *)
   mutable args : (expr * pass_by) list;
@@ -108,7 +104,6 @@ type func = {
   mutable body : block option;
   loc : loc;
   status : func_status;
-
   (* implicit information used in code generation. This field is used in
    * code generation *)
   parent_path : string list;
@@ -207,6 +202,7 @@ let get_func_name (func : func) =
 (* used when renaming functions to avoid name conflicts in codegen *)
 let get_proper_parent_func_name (func : func) = get_parent_name func
 let get_proper_func_name (func : func) = get_func_name func
+
 let get_proper_func_call_name (func_call : func_call) =
   let full_path = List.rev func_call.callee_path @ [ func_call.id ] in
   let full_path = List.filter (fun x -> x <> "") full_path in

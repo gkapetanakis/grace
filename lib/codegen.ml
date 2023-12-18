@@ -306,10 +306,10 @@ let init_codegen filename =
                 Llvm.build_gep l_val_ptr
                   [| c32 0; c32 0 |]
                   "array_elemptr" builder
-        (* !!!
-         * !!! Llvm.build_struct_gep l_val_ptr 0 "array_elemptr" builder
-         * !!! PROBABLY EQUIVALENT CODE, MIGHT CHECK LATER  
-        *)
+            (* !!!
+             * !!! Llvm.build_struct_gep l_val_ptr 0 "array_elemptr" builder
+             * !!! PROBABLY EQUIVALENT CODE, MIGHT CHECK LATER  
+             *)
             | _ -> gen_l_value frame caller_path l_v)
         | Ast.Simple (Ast.LString _) -> gen_l_value frame caller_path l_v
         | Ast.ArrayAccess Ast.{ simple_l_value = lv; exprs = e_l; _ } -> (
@@ -524,11 +524,12 @@ let init_codegen filename =
             ignore (Llvm.build_ret_void builder)
         (* possible case 3 *)
         | _, Some expr ->
-          let ret_val = gen_expr frame caller_path expr in
-          ignore (Llvm.build_ret ret_val builder))
+            let ret_val = gen_expr frame caller_path expr in
+            ignore (Llvm.build_ret ret_val builder)
         | _, None ->
             raise
               (Error.Internal_compiler_error "Impossible (gen_expr, Return, 3)")
+        )
   in
 
   let gen_func_decl (func : Ast.func) =
@@ -711,6 +712,6 @@ let init_codegen filename =
   in
   (the_module, context, irgen, codegen_imm, codegen_asm, codegen_obj)
 
-let dispose_codegen (the_module, context) =
+let dispose_codegen the_module context =
   Llvm.dispose_module the_module;
   Llvm.dispose_context context
