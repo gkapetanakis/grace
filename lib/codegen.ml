@@ -495,6 +495,8 @@ let init_codegen filename =
             | _ -> ()));
 
         Llvm.position_at_end merge_block builder;
+        (* in an if-then-else statement if both then and else return values, then control never reaches the merge block
+         * we simulate this behaviour by adding a dummy return value in the merge block, so that llvm doesn't throw errors *)
         if !ret_count = 2 then
           match ret_type with
           | Ast.Nothing -> ignore (Llvm.build_ret_void builder)
