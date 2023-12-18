@@ -1,0 +1,25 @@
+$ check multiple pass by refernces
+
+fun check_mult_ref(): nothing
+    var a: int;
+    var b: int[1];
+
+    fun f1(x1: ref int, x2: ref int[]): nothing
+        fun f2(y1: ref int, y2: ref int[]): nothing
+            fun f3(z1: ref int, z2: ref int[]): nothing
+            {
+                z1 <- 1;
+                z2[0] <- 1;
+            }
+        {
+            f3(y1, y2);
+        }
+    {
+        f2(x1, x2);
+    }
+{
+    f1(a, b);
+
+    if a # 1 or b[0] # 1 then
+        writeString("check_mult_ref failed\n");
+}

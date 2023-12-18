@@ -1,0 +1,7 @@
+$ check return function call that returns nothing
+
+fun check ret_nothing(): nothing
+    fun aux(): nothing {}
+{
+    return aux();
+}

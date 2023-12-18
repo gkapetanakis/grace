@@ -1,5 +1,5 @@
 (* DONE *)
-(* loc is a type representing the position (line, column) of an AST node in the source file *)
+(* loc is a type representing the position of an AST node in the source file. See "error.ml" descriptin of loc *)
 type loc = Error.loc
 type scalar = Int | Char | Nothing
 type data_type = Scalar of scalar | Array of scalar * int option list

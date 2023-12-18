@@ -1,6 +1,9 @@
 (* DONE *)
 (* every possible error of the compiler, plus functions for printing them nicely *)
 
+(* loc is a type which saves the starting and ending position of a token.
+ * This definition of loc matches Menhir's location interface and that is why we use it.
+ * In our code we only care about the starting position (line, column). *)
 type loc = Lexing.position * Lexing.position
 
 exception Lexing_error of loc * string

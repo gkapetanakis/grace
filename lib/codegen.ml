@@ -1,4 +1,4 @@
-(* almost DONE, check gen_func_arg *)
+(* DONE *)
 (* the module that translates the AST into LLVM IR
    and subsequently produces assembly, object files and executables *)
 
@@ -287,44 +287,60 @@ let init_codegen filename =
     | Ast.Reference -> Llvm.build_load element_ptr id builder
   and gen_func_arg frame caller_path ((e, pb) : Ast.expr * Ast.pass_by) =
     match pb with
+    (* if passing by value, then no arrays are allowed, so simply generate the expression *)
     | Ast.Value -> gen_expr frame caller_path e
+    (* passing by reference is more compicated *)
     | Ast.Reference -> (
-        let l_v =
+        (* only lvalues may be passed by reference *)
+        let full_l_value =
           match e with
-          | Ast.LValue l_v -> l_v
+          | Ast.LValue full_l_value -> full_l_value
           | _ ->
               raise
                 (Error.Internal_compiler_error
                    "Cannot pass by reference a non-lvalue")
         in
-        match l_v with
+        (*
+          Non array lvalues are simple. You may pass whatever gen_l_value returns.
+          Array lvalues are more complicated. You pass a pointer the first element of the array.
+          There is a distinction.
+          
+          If the array-lvalue is a parameter of a function (doesn't matter if it's an outer function)
+          then you already have a pointer to the first element of that array. Thus you can pass it as is.
+          If the array-lvalue is a variable the situation is different. You need to generate a pointer to
+          the first element of the array. This is done by generating a pointer to the array-lvalue and then
+          using GEP to get the pointer to the first element of the array.
+
+          Variables have been "passed by" value, while parameters have been "passed by" reference (when
+          talking about arrays).
+        *)
+        match full_l_value with
         | Ast.Simple (Ast.Id l_val_id) -> (
             let Ast.{ passed_by; data_type; _ } = l_val_id in
             match (passed_by, data_type) with
             | Ast.Value, Ast.Array _ ->
-                let l_val_ptr = gen_l_value frame caller_path l_v in
+                let l_val_ptr = gen_l_value frame caller_path full_l_value in
                 Llvm.build_gep l_val_ptr
                   [| c32 0; c32 0 |]
                   "array_elemptr" builder
-            (* !!!
-             * !!! Llvm.build_struct_gep l_val_ptr 0 "array_elemptr" builder
-             * !!! PROBABLY EQUIVALENT CODE, MIGHT CHECK LATER  
-             *)
-            | _ -> gen_l_value frame caller_path l_v)
-        | Ast.Simple (Ast.LString _) -> gen_l_value frame caller_path l_v
-        | Ast.ArrayAccess Ast.{ simple_l_value = lv; exprs = e_l; _ } -> (
-            match lv with
+            | _ -> gen_l_value frame caller_path full_l_value)
+        | Ast.Simple (Ast.LString _) ->
+            gen_l_value frame caller_path full_l_value
+        | Ast.ArrayAccess Ast.{ simple_l_value = slv; exprs = e_l; _ } -> (
+            match slv with
             | Ast.Id { passed_by; data_type; _ } -> (
                 match (passed_by, data_type) with
                 | Ast.Value, Ast.Array (_, dims) ->
                     if List.length dims > List.length e_l then
-                      let l_val_ptr = gen_l_value frame caller_path l_v in
+                      let l_val_ptr =
+                        gen_l_value frame caller_path full_l_value
+                      in
                       Llvm.build_gep l_val_ptr
                         [| c32 0; c32 0 |]
                         "array_elemptr" builder
-                    else gen_l_value frame caller_path l_v
-                | _ -> gen_l_value frame caller_path l_v)
-            | _ -> gen_l_value frame caller_path l_v))
+                    else gen_l_value frame caller_path full_l_value
+                | _ -> gen_l_value frame caller_path full_l_value)
+            | _ -> gen_l_value frame caller_path full_l_value))
   and gen_func_call frame caller_path (func_call : Ast.func_call) =
     let func_decl =
       match

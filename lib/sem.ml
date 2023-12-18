@@ -1,4 +1,4 @@
-(* almost DONE, check sem_expr *)
+(* DONE *)
 (* all semantic actions done during semantic analysis,
    except from symbol table related stuff*)
 
@@ -307,8 +307,9 @@ and sem_expr (expr : expr) (tbl : symbol_table) =
   | LitInt _ -> Scalar Int
   | LitChar _ -> Scalar Char
   (* LValue and FuncCall will have already been checked at this point *)
-  (* !!! why do we call sem_l_value again then? *)
+  (* We only use sem_l_value and sem_expr to get the types of these expressions... *)
   | LValue l_val -> sem_l_value l_val tbl
+  (* Useful even in cases where the return type is 'Nothing', we'll see this in Return statements as well *)
   | EFuncCall func_call -> Scalar func_call.ret_type
   | UnAritOp (_, expr) -> (
       match sem_expr expr tbl with
@@ -339,6 +340,7 @@ let sem_cond cond tbl =
       )
   | _ -> ()
 
+(* we only check these two statement types, because all other statements will have been checked in the process of building the AST *)
 let sem_stmt stmt tbl =
   match stmt with
   | Assign (l_val, expr) -> (
@@ -354,6 +356,7 @@ let sem_stmt stmt tbl =
         | Array _ -> raise (Semantic_error (loc, "Cannot assign to array"))
         | _ -> ())
   | Return { loc; expr_o } ->
+      (* expressions of the type return f(); where f return nothing are allowed, because sem_expr will return 'Scalar Nothing' *)
       let expr_type =
         match expr_o with
         | None -> Nothing
