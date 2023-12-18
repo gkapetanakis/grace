@@ -51,8 +51,7 @@ description  Note: LLVM should be installed first.
 
 ## Usage
 
-You may use the `dune build system` or the `Makefile` to build the compiler, which is essentially a
-wrapper of dune commands.
+You may use the `dune build system` or the `Makefile`, which is essentially a wrapper of dune commands, to build the compiler.
 
 Suppose you execute `make all`. Now you can use the Compiler as follows:
     - `dune exec gracec -- <options passed to compiler>`
