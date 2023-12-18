@@ -1,5 +1,72 @@
 # Compiler for the Grace programming language implemented in OCaml
 
+## Software (Requirements/Prerequisites)
+
+This software module works in an environment such as the following:
+
+```
+$ dune --version
+3.11.1
+$ ocamlc --version
+4.14.1
+$ opam --version
+2.1.2
+$ clang-14 --version
+Ubuntu clang version 14.0.6
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+$ llvm-config-14 --version
+14.0.6
+$ opam info llvm
+
+<><> llvm: information on all versions ><><><><><><><><><><><><><><><><><><><><>
+name                   llvm
+all-installed-versions 14.0.6 [default]
+all-versions           3.4  3.5  3.6  3.7  3.8  3.9  4.0.0  5.0.0  6.0.0  7.0.0  8.0.0  9.0.0  10.0.0  11.0.0  12.0.1  13.0.0  14.0.6  15.0.7+nnp-2  16.0.6+nnp
+
+<><> Version-specific details <><><><><><><><><><><><><><><><><><><><><><><><><>
+version      14.0.6
+repository   default
+url.src      "https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/llvm-project-14.0.6.src.tar.xz"
+url.checksum "sha256=8b3cfd7bc695bd6cea0f37f53f0981f34f87496e79e2529874fd03a2f9dd3a8a"
+homepage     "http://llvm.moe"
+doc          "http://llvm.moe/ocaml"
+bug-reports  "http://llvm.org/bugs/"
+dev-repo     "git+http://llvm.org/git/llvm.git"
+authors      "whitequark <whitequark@whitequark.org>" "The LLVM team"
+maintainer   "Kate <kit.ty.kate@disroot.org>"
+license      "MIT"
+depends      "ocaml" {>= "4.00.0"}
+             "ctypes" {>= "0.4"}
+             "ounit" {with-test}
+             "ocamlfind" {build}
+             "conf-llvm" {build & = version}
+             "conf-python-3" {build}
+             "conf-cmake" {build}
+conflicts    "base-nnp" "ocaml-option-nnpchecker"
+synopsis     The OCaml bindings distributed with LLVM
+description  Note: LLVM should be installed first.
+```
+
+## Usage
+
+You may use the `dune build system` or the `Makefile`, which is essentially a wrapper of dune commands.
+
+Suppose you execute `make all`. Now you can use the Compiler as follows:
+    - `dune exec gracec -- <options passed to compiler>`
+    - `dune exec bin/main.exe -- <options passed to compiler>`
+    - `dune exec _build/default/bin/main.exe -- <options passed to compiler>`
+
+Installing the compiler will install it as an ocaml module in the `opam directory`.
+If you install the compiler you can also execute:
+    - `gracec <options passed to compiler>`
+
+`<options passed to compiler>` are the options specified in the language documentation.
+
+Whichever way you may pick to run the compiler, you should do it from the `root directory` of this
+project. More specifically, the same directory that contains the `dune-project` file.
+
 ## Overview
 
 The compiler works as follows:
@@ -144,3 +211,10 @@ void global.f.f.f() {}
 void global.f.f() {}
 void global.f() {}
 ```
+## Runtime library
+The runtime library is implemented in C except for functions:
+    - `strlen`
+    - `strcmp`
+    - `strcpy`
+    - `strcat`
+which are linked to our program implicitly by clang.
