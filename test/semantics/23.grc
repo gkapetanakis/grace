@@ -4,9 +4,9 @@ fun check_mult_ref(): nothing
     var a: int;
     var b: int[1];
 
-    fun f1(x1: ref int, x2: ref int[]): nothing
-        fun f2(y1: ref int, y2: ref int[]): nothing
-            fun f3(z1: ref int, z2: ref int[]): nothing
+    fun f1(ref x1: int; ref x2: int[]): nothing
+        fun f2(ref y1: int; ref y2: int[]): nothing
+            fun f3(ref z1: int; ref z2: int[]): nothing
             {
                 z1 <- 1;
                 z2[0] <- 1;
