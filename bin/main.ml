@@ -1,4 +1,4 @@
-let debug = true
+let debug = false
 let compiler_name = ref String.empty
 let runtime_path = "runtime_lib/"
 let runtime_name = "grace"
@@ -74,7 +74,11 @@ let process_arguments () =
         if i = argc - 1 then filename := argv.(i) else handle_incorrect_call ()
   done;
   if !filename = String.empty && not (!asm_stdin_stdout || !imm_stdin_stdout)
-  then handle_incorrect_call ()
+  then handle_incorrect_call ();
+  if !asm_stdin_stdout && !imm_stdin_stdout then
+    print_endline
+      "Warning: both '-f' and '-i' flags were given, so the '-i' flag will be \
+       ignored"
 
 let open_in_channel () =
   if !asm_stdin_stdout || !imm_stdin_stdout then stdin else open_in !filename
