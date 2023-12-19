@@ -3,12 +3,12 @@
 ## Software (Requirements/Prerequisites)
 
 Requirements:
-    - LLVM 14
-    - Clang 14
-    - opam (the OCaml Package Manager)
+- LLVM 14
+- Clang 14
+- opam (the OCaml Package Manager)
 
 After installing the above, execute:
-    - `opam install dune menhir llvm.14.0.6 ctypes-foreign`
+- `opam install dune menhir llvm.14.0.6 ctypes-foreign`
 
 This software module works in an environment such as the following:
 
