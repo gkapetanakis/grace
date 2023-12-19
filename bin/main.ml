@@ -1,4 +1,3 @@
-(* DONE *)
 let debug = true
 let compiler_name = ref String.empty
 let runtime_path = "runtime_lib/"
@@ -40,6 +39,7 @@ let print_help_message () =
   print_endline "  -O  Enable optimizations.";
   print_endline "  -f  Get source code input from stdin and output compiled code to stdout.";
   print_endline "      File argument is not required in this case and will be ignored if provided.";
+  print_endline "      This flag has precedence over '-i'.";
   print_endline "  -i  Get source code input from stdin and output intermediate code to stdout.";
   print_endline "      File argument is not required in this case and will be ignored if provided.";
   [@@ocamlformat "disable"]
