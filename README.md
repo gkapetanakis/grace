@@ -1,5 +1,5 @@
 # Grace
-This project is a compiler for the (made-up) Grace programming language, built using OCaml and the LLVM back-end. It was created as part of the Compilers course of the [School of Electrical and Computer Engineering](https://www.ece.ntua.gr/en) of the [National Technical University of Athens](https://ntua.gr/en/) during the academic year 2022-2023.
+This project is a compiler for the (made-up) Grace programming language, built using OCaml and the LLVM infrastructure. It was created as part of the Compilers course of the [School of Electrical and Computer Engineering](https://www.ece.ntua.gr/en) of the [National Technical University of Athens](https://ntua.gr/en/) during the academic year 2022-2023.
 
 #### Contributors
 * `dimjimitris` - Dimitris Georgousis
