@@ -3,7 +3,7 @@
  (name main)
  (libraries grace_lib))
 
-(env
- (dev
-  (flags
-   (:standard -warn-error -A))))
+; (env
+;  (dev
+;   (flags
+;    (:standard -warn-error -A))))

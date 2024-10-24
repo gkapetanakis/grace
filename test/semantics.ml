@@ -42,7 +42,7 @@ let link_to_exe filename =
   let linker = "clang-14" in
   let input = Filename.remove_extension filename ^ ".test.o" in
   let output = Filename.remove_extension filename ^ ".test.exe" in
-  let runtime_path = "../runtime_lib/" in
+  let runtime_path = "../runtime_lib" in
   let runtime_name = "grace" in
   if
     Sys.command

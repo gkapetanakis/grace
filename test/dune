@@ -6,7 +6,7 @@
   (file ../runtime_lib/libgrace.a))
  (libraries grace_lib unix))
 
-(env
- (dev
-  (flags
-   (:standard -warn-error -A))))
+;(env
+; (dev
+;  (flags
+;   (:standard -warn-error -A))))
