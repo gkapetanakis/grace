@@ -1,118 +1,77 @@
-# Compiler for the Grace programming language implemented in OCaml
+# Grace
+This project is a compiler for the (made-up) Grace programming language, built using OCaml and the LLVM back-end. It was created as part of the Compilers course of the [School of Electrical and Computer Engineering](https://www.ece.ntua.gr/en) of the [National Technical University of Athens](https://ntua.gr/en/) during the academic year 2022-2023.
 
-## Software (Requirements/Prerequisites)
+#### Contributors
+* `dimjimitris` - Dimitris Georgousis
+* `gkapetanakis` - George Kapetanakis (me)
 
-Requirements:
-- LLVM 14
-- Clang 14
-- opam (the OCaml Package Manager)
+#### Grade
+The project was graded with a 10 out of 10.
 
-After installing the above, execute:
-- `opam install dune menhir llvm.14.0.6 ctypes-foreign`
+## Jump to a Section
+* [Repository Contents](#repository-contents)
+* [Setup Guide](#setup-guide)
+* [Usage Guide](#usage-guide)
+* [Testing Guide](#testing-guide)
+* [A High-level Overview](#a-high-level-overview)
+* [Some Low-level Details](#some-low-level-details)
 
-This software module works in an environment such as the following:
+## Repository Contents
+* `bin`: Contains the code of the main executable.
+* `handouts`: Contains a PDF with the project description and the Grace language's specification.
+* `lib`: Contains the rest of the code (most of the code is here: lexing, parsing, AST and code generation, optimizations). 
+* `runtime_lib`: Contains the code for Grace's runtime library, written in C.
+* `sample_programs`: Some sample `.grc` programs that the compiler can compile into executables.
+* `test`: Contains code used for testing the semantic analysis part of the compiler.
 
-```
-$ dune --version
-3.11.1
-$ ocamlc --version
-4.14.1
-$ opam --version
-2.1.2
-$ clang-14 --version
-Ubuntu clang version 14.0.6
-Target: x86_64-pc-linux-gnu
-Thread model: posix
-InstalledDir: /usr/bin
-$ llvm-config-14 --version
-14.0.6
-$ opam info llvm
+## Setup Guide
+### Software Requirements
+* LLVM 14
+* Clang 14 (`clang-14` should be in the PATH)
+* opam (the OCaml Package Manager)
 
-<><> llvm: information on all versions ><><><><><><><><><><><><><><><><><><><><>
-name                   llvm
-all-installed-versions 14.0.6 [default]
-all-versions           3.4  3.5  3.6  3.7  3.8  3.9  4.0.0  5.0.0  6.0.0  7.0.0  8.0.0  9.0.0  10.0.0  11.0.0  12.0.1  13.0.0  14.0.6  15.0.7+nnp-2  16.0.6+nnp
+### Installation Instructions
+* Clone the repository wherever you like (e.g. `./`) and `cd` into it.
+* Run `opam install dune menhir llvm.14.0.6 ctypes-foreign` (this might take a while to finish).
+* Run `make -C runtime_lib/ && make -C runtime_lib/ clean`.
+* Run `dune build`.
 
-<><> Version-specific details <><><><><><><><><><><><><><><><><><><><><><><><><>
-version      14.0.6
-repository   default
-url.src      "https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/llvm-project-14.0.6.src.tar.xz"
-url.checksum "sha256=8b3cfd7bc695bd6cea0f37f53f0981f34f87496e79e2529874fd03a2f9dd3a8a"
-homepage     "http://llvm.moe"
-doc          "http://llvm.moe/ocaml"
-bug-reports  "http://llvm.org/bugs/"
-dev-repo     "git+http://llvm.org/git/llvm.git"
-authors      "whitequark <whitequark@whitequark.org>" "The LLVM team"
-maintainer   "Kate <kit.ty.kate@disroot.org>"
-license      "MIT"
-depends      "ocaml" {>= "4.00.0"}
-             "ctypes" {>= "0.4"}
-             "ounit" {with-test}
-             "ocamlfind" {build}
-             "conf-llvm" {build & = version}
-             "conf-python-3" {build}
-             "conf-cmake" {build}
-conflicts    "base-nnp" "ocaml-option-nnpchecker"
-synopsis     The OCaml bindings distributed with LLVM
-description  Note: LLVM should be installed first.
-```
+## Usage Guide
+After building, the compiler can be run as follows:
+* `dune exec gracec -- [compiler options] <compiler input>` (try running `dune exec gracec -- --help`)
 
-## Usage
+The compiler can also be installed as an opam package using `dune install` inside `./`.
+After that, it can be run using as follows:
+* `gracec [options] <input>` (again, try `gracec --help`)
 
-You may use the `dune build system` or the `Makefile`, which is essentially a wrapper of dune commands, to build the compiler.
+## Testing Guide
+When the compiler is built (`dune build`) some semantic tests are run automatically. You can also execute the semantic tests by running `dune runtest` in `./`.
 
-Suppose you execute `make all`. Now you can use the Compiler as follows:
-- `dune exec gracec -- <options passed to compiler>`
-- `dune exec bin/main.exe -- <options passed to compiler>`
-- `dune exec _build/default/bin/main.exe -- <options passed to compiler>`
-
-Installing the compiler will install it as an ocaml module in the `opam directory`.
-If you install the compiler you can also execute:
-- `gracec <options passed to compiler>`
-
-`<options passed to compiler>` are the options specified in the language documentation.
-
-Whichever way you may pick to run the compiler, you should do it from the `root directory` of this
-project. More specifically, the same directory that contains the `dune-project` file.
-
-`make uninstall` might give you an error:
-`Error: Directory /home/<user>/.opam/default/bin is not empty, cannot delete (ignoring).`
-Which should be ignored, since it is expected that you usually have more things installed in `opam/default/bin`
-directory.
-
-## Overview
-
+## High-level Overview
 The compiler works as follows:
-- Lexical analysis is the first step and is implemented using ocamllex
-- Parsing is done along with the lexical analysis and is implemented using Menhir
-- Semantic analysis is done alongside the parsing
-- After the entire AST has been created and the semantic analysis has concluded, it is translated into LLVM IR, using the OCaml LLVM bindings.
-- The IR is (optionally) optimized before being translated to the assembly used by the host machine
-- LLVM emits LLVM IR code (in a `.imm` file), host machine assembly code (in a `.asm` file), as well as an object file (in a `.o` file)
-- Clang is finally used to link the `.o` file with the Grace runtime library and the C runtime library and create the final executable (in a `.exe` file)
-- If any errors are encountered at any phase of the compilation, an error message is output to stderr and the compilation fails
+* Lexical analysis is the first step and is implemented using ocamllex
+* Parsing is done along with the lexical analysis and is implemented using Menhir
+* Semantic analysis is done alongside the parsing
+* After the entire AST has been created and the semantic analysis has concluded, it is translated into LLVM IR (= intermediate representation), using the OCaml LLVM bindings.
+* The IR is (optionally) optimized before being translated to the assembly used by the host machine
+* LLVM emits LLVM IR code (in a `.imm` file), host machine assembly code (in a `.asm` file), as well as an object file (in a `.o` file)
+* Clang is finally used to link the `.o` file with the Grace runtime library and the C runtime library and create the final executable (in a `.exe` file)
+* If any errors are encountered at any phase of the compilation, an error message is output to stderr and the compilation fails
 
 In short, two intermediate representations are used, one that closely matches
 the grammar of the language, and LLVM IR.
 
-## Testing
+## Some Low-level Details
+### Data Flow
+* `lexer.mll` tokenizes the input and passes the tokens to `parser.mly`
+* The functions of `parser.mly` call functions from `wrapper.ml`
+* The functions of `wrapper.ml` call functions from `sem.ml`, `symbol.ml`
+* The AST is created
+* `codegen.ml` does the rest
 
-When the compiler is built some semantic tests are run, which the compiler should pass. You can also execute
-our semantic tests -both erroneous and correct programs- by running `dune runtest` from the root directory of the project.
-
-## Data Flow
-
-`lexer.mll` tokenizes the input and passes the tokens to `parser.mly`
-The functions of `parser.mly` call functions from `wrapper.ml`
-The functions of `wrapper.ml` call functions from `sem.ml`, `symbol.ml`
-The AST is created
-`codegen.ml` does the rest
-
-## Nested Functions
-
+### Nested Functions
 LLVM does not support nested functions, but Grace does.
-In order to use LLVM for optimizing and translating to
-assembly/machine code the following workaround is done:
+In order to use LLVM for optimizing and translating to assembly/machine code the following workaround is used:
 
 Consider a simple Grace program:
 ```
@@ -181,19 +140,18 @@ void f() {
 
 The code that does this can be found in `codegen.ml`
 
-## Virtual Main
-
-The linkage of the emitted object file with the Grace and C
-runtime libraries is done using clang.
-The linker of clang expects to find an 'int main()'
-function that signifies the entrypointof the program.
+### Virtual Main
+The linkage of the emitted object file with the Grace and C runtime libraries is done using clang.
+The linker of clang expects to find an 'int main()' function that signifies the entrypoint of the program.
 The way the compiler handles that is as follows:
 
 Consider a simple Grace program
 ```
 fun f(): nothing {}
+```
 
-// The equivalent LLVM representation (written using C syntax) is:
+The equivalent LLVM representation (written using C syntax) is:
+```
 void main_f() {}
 
 int main() {
@@ -201,11 +159,9 @@ int main() {
 }
 ```
 
-The code that does this can be found in `wrapper.ml` (`insert_virtual_main` function)
-(admittedly probably not the most fitting place for it)
+The code that does this can be found in `wrapper.ml` (`insert_virtual_main` function) (admittedly probably not the most fitting place for it).
 
-## Function Name Resolution
-
+### Function Name Resolution
 In Grace, the following is allowed:
 ```
 fun f(): nothing
@@ -216,21 +172,12 @@ fun f(): nothing
 {}
 ```
 
-When un-nesting functions (as shown previously)
-the names of the functions need to change.
-The current implementation would produce the following
-LLVM IR (in C syntax, ignoring the virtual main for simplicity):
+When un-nesting functions (as shown previously) the names of the functions need to change.
+The current implementation would produce the following LLVM IR (in C syntax, ignoring the virtual main for simplicity):
 ```
 void global.f.f.f() {}
 void global.f.f() {}
 void global.f() {}
 ```
-## Runtime library
-
-The runtime library is implemented in C except for functions:
-- `strlen`
-- `strcmp`
-- `strcpy`
-- `strcat`
-
-which are linked to our program implicitly by clang.
+### Runtime library
+The runtime library is implemented in C except for the functions `strlen`, `strcmp`, `strcpy`, `strcat`, which are linked to our program implicitly by clang.
